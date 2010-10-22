@@ -17,9 +17,9 @@ def main():
 	parser.add_option("-c","--command",dest="command")
 	parser.add_option("-d","--buffer-time",dest="cache")
 
-	parser.set_defaults(hq=False)
-	parser.set_defaults(command="vlc --http-caching=$cache $url")
-	parser.set_defaults(cache=60000)
+	parser.set_defaults(hq=True)
+	parser.set_defaults(command='vlc "--http-caching=$cache" "$url" &')
+	parser.set_defaults(cache=1)
 	(options,args) = parser.parse_args()
 
 	gomtvURL = "http://www.gomtv.net"
@@ -55,8 +55,9 @@ def main():
 					'cache':options.cache,
 	                'url':url
 			       }
-	print command.substitute(commandArgs)
-
+	cmd = command.substitute(commandArgs)
+	print(cmd)
+	os.system(cmd)
 def parseURLs(response):
 	patternGOMCMD = r"gomcmd://[^;]+;"
 	commands = re.findall(patternGOMCMD,response)
