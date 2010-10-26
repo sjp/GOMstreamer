@@ -9,6 +9,9 @@ from string import Template
 # set up variables and constants
 def main():
 
+	defaultOSXcommandVLC = '/Applications/VLC.app/Contents/MacOS/VLC "--http-caching=$cache" "$url"'
+	defaultLinuxVLC = 'vlc "--http-caching=$cache" "$url"'
+
 	parser = OptionParser()
 	parser.add_option("-p","--password",dest="password")
 	parser.add_option("-e","--email",dest="email")
@@ -18,7 +21,10 @@ def main():
 	parser.add_option("-d","--buffer-time",dest="cache")
 
 	parser.set_defaults(hq=True)
-	parser.set_defaults(command='vlc "--http-caching=$cache" "$url" &')
+	if os.uname()[0] == 'Darwin':
+		parser.set_defaults(command=defaultOSXcommandVLC)
+	else:
+		parser.set_defaults(command=defaultLinuxVLC)
 	parser.set_defaults(cache=1)
 	(options,args) = parser.parse_args()
 
