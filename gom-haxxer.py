@@ -14,6 +14,12 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 '''
+
+'''
+TODO:   -add help to help commands
+		-create some documentation about usage and examples in readme.md
+		-error handling
+'''
 import urllib2
 import cookielib
 import urllib
