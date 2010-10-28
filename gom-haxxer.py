@@ -35,12 +35,12 @@ def main():
 	defaultLinuxVLC = 'vlc "--http-caching=$cache" "$url"'
 
 	parser = OptionParser()
-	parser.add_option("-p","--password",dest="password")
-	parser.add_option("-e","--email",dest="email")
-	parser.add_option("-b",action="store_true",dest="hq")
-	parser.add_option("-l",action="store_false",dest="hq")
-	parser.add_option("-c","--command",dest="command")
-	parser.add_option("-d","--buffer-time",dest="cache")
+	parser.add_option("-p","--password",dest="password", help="Password to your GomTV account.")
+	parser.add_option("-e","--email",dest="email", help="Email your GomTV account uses.")
+	parser.add_option("-b",action="store_true",dest="hq", help="Use better quality stream. (Default)")
+	parser.add_option("-l",action="store_false",dest="hq", help="Use lower quality stream")
+	parser.add_option("-c","--command",dest="command", help="Customg command to run.")
+	parser.add_option("-d","--buffer-time",dest="cache",help ="Cache size in [ms]")
 
 	parser.set_defaults(hq=True)
 	if os.uname()[0] == 'Darwin':
