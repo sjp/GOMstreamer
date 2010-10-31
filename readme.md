@@ -20,7 +20,7 @@ Requirements
 Usage
 -----
 
-###Gom-Haxxer parameters###
+### Gom-Haxxer parameters ###
 	-h, --help        show the help message and exit
 	-p PASSWORD, --password=PASSWORD
                       Password to your GomTV account.
@@ -46,7 +46,7 @@ For example, the default VLC command used by Gom-Haxxer is:
 
 Security
 --------
-Gom-Haxxer requires ones login information in order to retrieve stream url. These information are sent to the GomTV website over the insecure http protocol, just like it would if one used browser to start up the GomPlayer. Therefore the security risk is exactly the same as i one used the 'official' method to start up the stream. The password and login information are ONLY sent to the GomTV site and are never stored by the script.
+Gom-Haxxer requires one's login information in order to retrieve stream url. These information are sent to the GomTV website over the insecure http protocol, just like it would be if one used browser to start up the GomPlayer. Therefore the security risk is exactly the same as if one used the 'official' method to start up the stream. The password and login information are ONLY sent to the GomTV site and are never stored by the script.
 
 TODO
 ----
