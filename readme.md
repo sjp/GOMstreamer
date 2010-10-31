@@ -32,11 +32,12 @@ Usage
                       Customg command to run.
 	-d CACHE, --buffer-time=CACHE
                       Cache size in [ms]
-###Usage with VLC player###
+### Usage with VLC player ###
 Gom-Haxxer uses VLC player by default. In OS X, it requires vlc to be located in /Applications folder while on other Unix based systems it requires it to be in your shell path (try to type `vlc --version` in terminal). If one decides to use default configuration, all one needs to do is specify email and password via Gom-Haxxer parameters and the system should take care of the rest. Once can also specify the cache length via `-b` parameter.
 
-###Advanced usage with custom commands###
+### Advanced usage with custom commands ###
 Once can also define a specific command he wants Gom-Haxxer to run. There are variables which will be filled in by the Gom-Haxxer one can utilize in his command. The variables are:
+
 - `$url` = url of the stream retrieved by Gom-Haxxer
 - `$cache` = cache size requested by the user to be used by media player
 
