@@ -1,4 +1,4 @@
-#!/bin/sh
-EMAIL="youremail@mail.com"
-PASSWORD="YOURPASSWORD"
-python ./gom-haxxer.py "-e $EMAIL" "-p PASSWORD"
+#!/bin/bash
+EMAIL="youremail@example.com"
+PASSWORD="PASSWORD"
+python ./gomstreamer.py "-e $EMAIL" "-p $PASSWORD"
