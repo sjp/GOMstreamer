@@ -20,6 +20,9 @@ Requirements
 Usage
 -----
 
+### Standard Usage ###
+Enter your GOMtv email and password into the `run.sh` script, then execute it.
+
 ### GOMstreamer parameters ###
     -h, --help            Show this help message and exit
     -p PASSWORD, --password=PASSWORD
