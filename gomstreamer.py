@@ -56,6 +56,12 @@ def main():
     parser.set_defaults(cache = 30000)  # Caching 30s by default
     (options, args) = parser.parse_args()
 
+    # Stopping if email and password are defaults found in run.sh
+    if options.email == "youremail@example.com" and options.password == "PASSWORD":
+        print "Enter in your GOMtv email and password into run.sh."
+        print "This script will not work correctly without a valid account."
+        sys.exit(1)
+
     gomtvURL = "http://www.gomtv.net"
     gomtvLiveURL = gomtvURL + "/2010gslopens3/live/"
     gomtvSignInURL = gomtvURL + "/user/loginCheck.php"
