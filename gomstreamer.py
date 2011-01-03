@@ -63,7 +63,7 @@ def main():
         sys.exit(1)
 
     gomtvURL = "http://www.gomtv.net"
-    gomtvLiveURL = gomtvURL + "/2010gslopens3/live/"
+    gomtvLiveURL = gomtvURL + "/2011gslsponsors1/live/"
     gomtvSignInURL = gomtvURL + "/user/loginCheck.php"
     values = {
              'cmd': 'login',
