@@ -37,15 +37,14 @@ def main():
 
     # Collecting options parsed in from the command line
     parser = OptionParser()
-    parser.add_option("-p", "--password", dest = "password", help = "Password to your GomTV account")
-    parser.add_option("-e", "--email", dest = "email", help = "Email your GomTV account uses")
-    parser.add_option("-b", action = "store_true", dest = "hq", help = "Use better quality stream")
-    parser.add_option("-s", action = "store_false", dest = "hq", help = "Use lower quality stream (Default)")
+    parser.add_option("-p", "--password", dest = "password", help = "Password to your GOMtv account")
+    parser.add_option("-e", "--email", dest = "email", help = "Email your GOMtv account uses")
+    parser.add_option("-q", "--quality", dest = "quality", help = "Stream quality to use: 'HQ', 'SQ' or 'SQTest'. Default is 'SQTest'. This parameter is case sensitive.")
     parser.add_option("-c", "--command", dest = "command", help = "Custom command to run")
     parser.add_option("-d", "--buffer-time", dest = "cache", help = "Cache size in [ms]")
 
-    # Setting parameters
-    parser.set_defaults(hq = False)  # I don't have a premium account to test otherwise
+    # Setting stream quality default to 'SQTest'. May work for HQ and SQ but can't test.
+    parser.set_defaults(quality = "SQTest")
 
     # Determining which VLC command to use based on the OS that this script is being run on
     if os.uname()[0] == 'Darwin':
@@ -64,10 +63,10 @@ def main():
 
     gomtvURL = "http://www.gomtv.net"
     gomtvLiveURL = gomtvURL + "/2011gslsponsors1/live/"
-    gomtvSignInURL = gomtvURL + "/user/loginCheck.php"
+    gomtvSignInURL = gomtvURL + "/user/loginProcess.gom"
     values = {
              'cmd': 'login',
-             'returl': '%2F',
+             'rememberme': '1',
              'mb_username': options.email,
              'mb_password': options.password
              }
@@ -84,37 +83,14 @@ def main():
     # Collecting data on the Live streaming page
     request = urllib2.Request(gomtvLiveURL)
     response = urllib2.urlopen(request)
-    urls = parseURLs(response.read())
+    url = parseHTML(response.read(), options.quality)
 
-    if len(urls) == 0:
-        print "Unable to find URLs on the Live streaming page. Is the stream available?"
+    if len(url) == 0:
+        print "Unable to find URL on the Live streaming page. Is the stream available?"
         sys.exit(404)  # Giving a status of 404 due to no streams found
 
     if debug:
-        print "Printing URLs on Live page:"
-        print urls
-        print ""
-
-    # If we can use the HQ stream URL, use that instead of the SQ stream
-    if options.hq:
-        url = parseHQStreamURL(urls)
-    else:
-        url = parseSQStreamURL(urls)
-
-    if url == None:
-        print "Unable to parse the stream URL from the set of URLs."
-        print "This may have occurred if you chose an HQ stream without a"
-        print "premium account."
-
-        if debug:
-            print "urls:"
-            print urls
-            print "Stream URL:", url
-
-        sys.exit(1)
-
-    if debug:
-        print "Printing the listed stream url"
+        print "Printing URL on Live page:"
         print url
         print ""
 
@@ -151,38 +127,25 @@ def main():
     print "Playing stream via VLC..."
     os.system(cmd)
 
-def parseURLs(response):
+def parseHTML(response, quality):
+    # Parsing through the live page for a link to the gox XML file.
+    # Quality is simply passed as a URL parameter e.g. HQ, SQ, SQTest
+    patternHTML = r"http://www.gomtv.net/gox[^;]+;"
+    urlFromHTML = re.search(patternHTML, response).group(0)
+    urlFromHTML = re.sub(r"\" \+ playType \+ \"", quality, urlFromHTML)
+    urlFromHTML = re.sub(r"\"[^;]+;", "", urlFromHTML)
 
-    if debug:
-        print "Response:"
-        print response
-        print ""
+    # Finding the title of the stream, probably not necessary but
+    # done for completeness
+    patternTitle = r"this\.title[^;]+;"
+    titleFromHTML = re.search(patternTitle, response).group(0)
+    titleFromHTML = re.search(r"\"(.*)\"", titleFromHTML).group(0)
+    titleFromHTML = re.sub(r"\"", "", titleFromHTML)
 
-    patternGOMCMD = r"gomcmd://[^;]+;"
-    commands = re.findall(patternGOMCMD, response)
-    return map(parseHTTPofCmd, commands)
-
-def parseHTTPofCmd(item):
-    patternHTTP = r"(http://[^;]+)';"
-    return re.search(patternHTTP, item).group(1)
-
-# Probably works, can't test though
-def parseHQStreamURL(urls):
-    hqStreamPattern = r".*HQ.*"
-    return parseStreamFileURL(urls, hqStreamPattern)
-
-def parseSQStreamURL(urls):
-    lqStreamPattern = r".*SQ.*"
-    return parseStreamFileURL(urls, lqStreamPattern)
-
-def parseStreamFileURL(urls, pattern):
-    for url in urls:
-        if re.match(pattern, url):
-            return url
+    return (urlFromHTML + titleFromHTML)
 
 def parseStreamURL(response):
-
-    streamPattern = r'<REF href= "([^"]*)"/>'
+    streamPattern = r'<REF href="([^"]*)"/>'
     regexResult = re.search(streamPattern, response).group(1)
 
     # Collected the gomcmd URL, now need to extract the correct HTTP URL
@@ -198,6 +161,7 @@ def parseStreamURL(response):
     regexResult = re.sub(r'%2[Ff]', '/', regexResult) # Fixing /
     regexResult = re.sub(r'&amp;', '&', regexResult) # Removing amp;
     regexResult = re.sub(r'&quot;', '', regexResult) # Removing &quot;
+
     return regexResult
 
 # Actually run the script
