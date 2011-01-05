@@ -155,6 +155,7 @@ def parseStreamURL(response):
 
     # Found URL, just need to fix URL characters
     regexResult = re.sub(r'%3[Aa]', ':', regexResult) # Fixing :
+    regexResult = re.sub(r'%3[Bb]', ';', regexResult) # Fixing ;
     regexResult = re.sub(r'%3[Ff]', '?', regexResult) # Fixing ?
     regexResult = re.sub(r'%3[Dd]', '=', regexResult) # Fixing =
     regexResult = re.sub(r'%26', '&', regexResult) # Fixing &
