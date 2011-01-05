@@ -47,10 +47,13 @@ def main():
     parser.set_defaults(quality = "SQTest")
 
     # Determining which VLC command to use based on the OS that this script is being run on
-    if os.uname()[0] == 'Darwin':
-        parser.set_defaults(command = vlcOSX)
+    if os.name == 'posix':
+        if os.uname()[0] == 'Darwin':
+            parser.set_defaults(command = vlcOSX)
+        else:
+            parser.set_defaults(command = vlcLinux)
     else:
-        parser.set_defaults(command = vlcLinux)
+        parser.set_defaults(command = vlcLinux)  # On Windows, assuming VLC is in the PATH, this should work.
 
     parser.set_defaults(cache = 30000)  # Caching 30s by default
     (options, args) = parser.parse_args()
