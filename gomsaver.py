@@ -122,6 +122,7 @@ def main():
                   }
     cmd = command.substitute(commandArgs)
     cmd = cmd + " :demux=dump :demuxdump-file=\"" + options.outputFile + "\""
+
     print "Stream URL:", url
     print ""
     print "VLC command:", cmd
@@ -155,13 +156,7 @@ def parseStreamURL(response):
     patternHTTP = r"(http%3a.+)&quot;"
     regexResult = re.search(patternHTTP, regexResult).group(0)
 
-    # Found URL, just need to fix URL characters
-    regexResult = re.sub(r'%3[Aa]', ':', regexResult) # Fixing :
-    regexResult = re.sub(r'%3[Bb]', ';', regexResult) # Fixing ;
-    regexResult = re.sub(r'%3[Ff]', '?', regexResult) # Fixing ?
-    regexResult = re.sub(r'%3[Dd]', '=', regexResult) # Fixing =
-    regexResult = re.sub(r'%26', '&', regexResult) # Fixing &
-    regexResult = re.sub(r'%2[Ff]', '/', regexResult) # Fixing /
+    regexResult = urllib.unquote(regexResult) # Unquoting URL entities
     regexResult = re.sub(r'&amp;', '&', regexResult) # Removing amp;
     regexResult = re.sub(r'&quot;', '', regexResult) # Removing &quot;
 
