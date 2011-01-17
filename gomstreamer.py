@@ -122,6 +122,7 @@ def main():
                   'url': url
                   }
     cmd = command.substitute(commandArgs)
+    cmd = cmd + " vlc://quit"
 
     print "Stream URL:", url
     print ""

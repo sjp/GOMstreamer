@@ -125,6 +125,7 @@ def main():
                   }
     cmd = command.substitute(commandArgs)
     cmd = cmd + " :demux=dump :demuxdump-file=\"" + options.outputFile + "\""
+    cmd = cmd + " vlc://quit"
 
     print "Stream URL:", url
     print ""
