@@ -21,7 +21,7 @@ Usage
 -----
 
 ### Standard Usage ###
-Enter your GOMtv email and password into the `run.sh` script, then execute it. For GOMsaver, do the same but for the `save.sh` script. To play the stream that GOMsaver dumped, open the file (default = `dump.ogm`) in any decent media player, like VLC.
+Enter your GOMtv email and password into the `play.sh` script, then execute it. For GOMsaver, do the same but for the `save.sh` script. To play the stream that GOMsaver dumped, open the file (default = `dump.ogm`) in any decent media player, like VLC.
 
 ### GOMstreamer parameters ###
     -h, --help            show this help message and exit
@@ -68,7 +68,3 @@ For example, the default VLC command used by GOMstreamer is:
 Security
 --------
 GOMstreamer requires one's login information in order to retrieve the stream url. This information is sent to the GOMtv website over the insecure HTTP protocol, just like it would be if one used browser to start up the GOM Player. Therefore the security risk is exactly the same as if one used the 'official' method to start up the stream. The password and login information are ONLY sent to the GOMtv site and are never stored by the script.
-
-TODO
-----
-- Fix Autoplay in OSX
