@@ -47,20 +47,24 @@ def main():
     parser.set_defaults(quality = "SQTest")
 
     # Determining which VLC command to use based on the OS that this script is being run on
-    if os.name == 'posix':
-        if os.uname()[0] == 'Darwin':
-            parser.set_defaults(command = vlcOSX)
-        else:
-            parser.set_defaults(command = vlcLinux)
+    if os.name == 'posix' and os.uname()[0] == 'Darwin':
+        parser.set_defaults(command = vlcOSX)
     else:
         parser.set_defaults(command = vlcLinux)  # On Windows, assuming VLC is in the PATH, this should work.
 
     parser.set_defaults(cache = 30000)  # Caching 30s by default
     (options, args) = parser.parse_args()
 
-    # Stopping if email and password are defaults found in run.sh
+    # Printing out parameters
+    if debug:
+        print "Email: ", options.email
+        print "Password: ", options.password
+        print "Quality: ", options.quality
+        print "Command: ", options.command
+
+    # Stopping if email and password are defaults found in play.sh
     if options.email == "youremail@example.com" and options.password == "PASSWORD":
-        print "Enter in your GOMtv email and password into run.sh."
+        print "Enter in your GOMtv email and password into play.sh."
         print "This script will not work correctly without a valid account."
         sys.exit(1)
 
@@ -83,14 +87,14 @@ def main():
     urllib2.install_opener(opener)
     response = urllib2.urlopen(request)
 
+    if len(cookiejar) == 0:
+        print "Authentification failed. Please check your login and password."
+        sys.exit(1)
+
     # Collecting data on the Live streaming page
     request = urllib2.Request(gomtvLiveURL)
     response = urllib2.urlopen(request)
     url = parseHTML(response.read(), options.quality)
-
-    if len(url) == 0:
-        print "Unable to find URL on the Live streaming page. Is the stream available?"
-        sys.exit(404)  # Giving a status of 404 due to no streams found
 
     if debug:
         print "Printing URL on Live page:"
@@ -102,19 +106,8 @@ def main():
     response = urllib2.urlopen(request)
     responseData = response.read()
 
-    if debug:
-        print "Response:"
-        print responseData
-        print ""
-
     # Find out the URL found in the response
     url = parseStreamURL(responseData)
-
-    if url == None:
-        print "Unable to parse the URL to find the HTTP video stream."
-        print "url:", url
-        print ""
-        sys.exit(1)
 
     command = Template(options.command)
     commandArgs = {
@@ -132,34 +125,60 @@ def main():
     os.system(cmd)
 
 def parseHTML(response, quality):
+    # Seeing what we've received from GOMtv
+    if debug:
+        print "Response:"
+        print response
+
     # Parsing through the live page for a link to the gox XML file.
     # Quality is simply passed as a URL parameter e.g. HQ, SQ, SQTest
-    patternHTML = r"http://www.gomtv.net/gox[^;]+;"
-    urlFromHTML = re.search(patternHTML, response).group(0)
-    urlFromHTML = re.sub(r"\" \+ playType \+ \"", quality, urlFromHTML)
-    urlFromHTML = re.sub(r"\"[^;]+;", "", urlFromHTML)
+    try:
+        patternHTML = r"http://www.gomtv.net/gox[^;]+;"
+        urlFromHTML = re.search(patternHTML, response).group(0)
+        urlFromHTML = re.sub(r"\" \+ playType \+ \"", quality, urlFromHTML)
+        urlFromHTML = re.sub(r"\"[^;]+;", "", urlFromHTML)
+    except AttributeError:
+        print "Error: Unable to find the majority of the GOMtv XML URL on the Live page."
+        sys.exit(0)
 
     # Finding the title of the stream, probably not necessary but
     # done for completeness
-    patternTitle = r"this\.title[^;]+;"
-    titleFromHTML = re.search(patternTitle, response).group(0)
-    titleFromHTML = re.search(r"\"(.*)\"", titleFromHTML).group(0)
-    titleFromHTML = re.sub(r"\"", "", titleFromHTML)
+    try:
+        patternTitle = r"this\.title[^;]+;"
+        titleFromHTML = re.search(patternTitle, response).group(0)
+        titleFromHTML = re.search(r"\"(.*)\"", titleFromHTML).group(0)
+        titleFromHTML = re.sub(r"\"", "", titleFromHTML)
+    except AttributeError:
+        print "Error: Unable to find the stream title on the Live page."
+        sys.exit(0)
 
     return (urlFromHTML + titleFromHTML)
 
 def parseStreamURL(response):
-    streamPattern = r'<REF href="([^"]*)"/>'
-    regexResult = re.search(streamPattern, response).group(1)
+    # Observing the GOX XML file containing the stream link
+    if debug:
+        print "GOX XML:"
+        print response
+
+    # Grabbing the gomcmd URL
+    try:
+        streamPattern = r'<REF href="([^"]*)"/>'
+        regexResult = re.search(streamPattern, response).group(1)
+    except AttributeError:
+        print "Error: Unable to find the gomcmd URL in the GOX XML file."
+        sys.exit(0)
 
     # Collected the gomcmd URL, now need to extract the correct HTTP URL
     # from the string
-    patternHTTP = r"(http%3a.+)&quot;"
-    regexResult = re.search(patternHTTP, regexResult).group(0)
-
-    regexResult = urllib.unquote(regexResult) # Unquoting URL entities
-    regexResult = re.sub(r'&amp;', '&', regexResult) # Removing amp;
-    regexResult = re.sub(r'&quot;', '', regexResult) # Removing &quot;
+    try:
+        patternHTTP = r"(http%3[Aa].+)&quot;"
+        regexResult = re.search(patternHTTP, regexResult).group(0)
+        regexResult = urllib.unquote(regexResult) # Unquoting URL entities
+        regexResult = re.sub(r'&amp;', '&', regexResult) # Removing amp;
+        regexResult = re.sub(r'&quot;', '', regexResult) # Removing &quot;
+    except AttributeError:
+        print "Error: Unable to extract the HTTP stream from the gomcmd URL."
+        sys.exit(0)
 
     return regexResult
 
