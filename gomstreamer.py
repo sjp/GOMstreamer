@@ -160,6 +160,11 @@ def parseStreamURL(response, quality):
         print "GOX XML:"
         print response
 
+    # The response for the GOX XML if an incorrect stream quality is chosen is 1002.
+    if (response == "1002"):
+        print "Error: A premium ticket is required to watch higher quality streams, please choose 'SQTest' instead."
+        sys.exit(0)
+
     # Grabbing the gomcmd URL
     try:
         streamPattern = r'<REF href="([^"]*)"/>'
