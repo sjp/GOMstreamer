@@ -118,7 +118,7 @@ def main():
         print ""
 
     # Find out the URL found in the response
-    url = parseStreamURL(responseData)
+    url = parseStreamURL(responseData, options.quality)
 
     if url == None:
         print "Unable to parse the URL to find the HTTP video stream."
@@ -172,7 +172,7 @@ def parseHTML(response, quality):
 
     return (urlFromHTML + titleFromHTML)
 
-def parseStreamURL(response):
+def parseStreamURL(response, quality):
     # Observing the GOX XML file containing the stream link
     if debug:
         print "GOX XML:"
@@ -186,13 +186,20 @@ def parseStreamURL(response):
         print "Error: Unable to find the gomcmd URL in the GOX XML file."
         sys.exit(0)
 
+    # If we are using a premium ticket, we don't need to parse the URL further
+    # we just need to clean it up a bit
+    if quality == 'HQ' or quality == 'SQ':
+        regexResult = urllib.unquote(regexResult) # Unquoting URL entities
+        regexResult = re.sub(r'&amp;', '&', regexResult) # Removing &amp;
+        return regexResult
+
     # Collected the gomcmd URL, now need to extract the correct HTTP URL
-    # from the string
+    # from the string, only for 'SQTest'
     try:
         patternHTTP = r"(http%3[Aa].+)&quot;"
         regexResult = re.search(patternHTTP, regexResult).group(0)
         regexResult = urllib.unquote(regexResult) # Unquoting URL entities
-        regexResult = re.sub(r'&amp;', '&', regexResult) # Removing amp;
+        regexResult = re.sub(r'&amp;', '&', regexResult) # Removing &amp;
         regexResult = re.sub(r'&quot;', '', regexResult) # Removing &quot;
     except AttributeError:
         print "Error: Unable to extract the HTTP stream from the gomcmd URL."
