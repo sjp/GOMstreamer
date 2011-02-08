@@ -44,7 +44,7 @@ def main():
     parser.add_option("-d", "--buffer-time", dest = "cache", help = "Cache size in [ms]")
     parser.add_option("-o", "--output", dest = "outputFile", help = "File to save stream to (Default = dump.ogm)")
 
-    # Setting stream quality default to 'SQTest'. May work for HQ and SQ but can't test.
+    # Setting default stream quality to 'SQTest'.
     parser.set_defaults(quality = "SQTest")
     parser.set_defaults(outputFile = "dump.ogm")
 
@@ -195,7 +195,7 @@ def parseStreamURL(response, quality):
     # we just need to clean it up a bit
     if quality == 'HQ' or quality == 'SQ':
         regexResult = urllib.unquote(regexResult) # Unquoting URL entities
-        regexResult = re.sub(r'&amp;', '&', regexResult) # Removing &amp;
+        regexResult = re.sub(r'&amp;', '&', regexResult) # Removing amp;
         return regexResult
 
     # Collected the gomcmd URL, now need to extract the correct HTTP URL
@@ -204,7 +204,7 @@ def parseStreamURL(response, quality):
         patternHTTP = r"(http%3[Aa].+)&quot;"
         regexResult = re.search(patternHTTP, regexResult).group(0)
         regexResult = urllib.unquote(regexResult) # Unquoting URL entities
-        regexResult = re.sub(r'&amp;', '&', regexResult) # Removing &amp;
+        regexResult = re.sub(r'&amp;', '&', regexResult) # Removing amp;
         regexResult = re.sub(r'&quot;', '', regexResult) # Removing &quot;
     except AttributeError:
         print "Error: Unable to extract the HTTP stream from the gomcmd URL."
