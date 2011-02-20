@@ -2,6 +2,7 @@
 
 '''
 Copyright 2010 Simon Potter, Tomáš Heřman
+Copyright 2011 Simon Potter
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
