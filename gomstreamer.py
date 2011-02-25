@@ -33,8 +33,8 @@ def main():
 
     # Application locations and parameters for different operating systems.
     # May require changing on OSX, can't test.
-    vlcOSX = '/Applications/VLC.app/Contents/MacOS/VLC "--http-caching=$cache" "$url"'
-    vlcLinux = 'vlc "--http-caching=$cache" "$url"'
+    vlcOSX = '/Applications/VLC.app/Contents/MacOS/VLC "$url" "--http-caching=$cache"'
+    vlcLinux = 'vlc "$url" "--http-caching=$cache"'
 
     # Collecting options parsed in from the command line
     parser = OptionParser()
