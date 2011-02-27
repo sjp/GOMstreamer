@@ -24,6 +24,8 @@ import StringIO
 import re
 import os
 import sys
+import datetime
+import time
 from optparse import OptionParser
 from string import Template
 def main():
@@ -42,14 +44,13 @@ def main():
     parser = OptionParser()
     parser.add_option("-p", "--password", dest = "password", help = "Password to your GOMtv account")
     parser.add_option("-e", "--email", dest = "email", help = "Email your GOMtv account uses")
-    parser.add_option("-m", "--mode", dest = "mode", help = "Mode of use: 'play' or 'save'. Default is 'play'. This parameter is case sensitive.")
+    parser.add_option("-m", "--mode", dest = "mode", help = "Mode of use: 'play', 'save' or 'delayed-save'. Default is 'play'. This parameter is case sensitive.")
     parser.add_option("-q", "--quality", dest = "quality", help = "Stream quality to use: 'HQ', 'SQ' or 'SQTest'. Default is 'SQTest'. This parameter is case sensitive.")
+    parser.add_option("-o", "--output", dest = "outputFile", help = "File to save stream to (Default = dump.ogm)")
+    parser.add_option("-t", "--time", dest = "kt", help = "If the 'delayed-save' mode is used, this option holds the value of the *Korean* time to record at in HH:MM format. (Default = '18:00')")
     parser.add_option("-c", "--command", dest = "command", help = "Custom command to run")
     parser.add_option("-d", "--buffer-time", dest = "cache", help = "Cache size in [ms]")
-    parser.add_option("-o", "--output", dest = "outputFile", help = "File to save stream to (Default = dump.ogm)")
 
-    # Setting default stream quality to 'SQTest'.
-    parser.set_defaults(quality = "SQTest")
 
     # Determining which VLC command to use based on the OS that this script is being run on
     if os.name == 'posix' and os.uname()[0] == 'Darwin':
@@ -57,8 +58,10 @@ def main():
     else:
         parser.set_defaults(command = vlcLinux)  # On Windows, assuming VLC is in the PATH, this should work.
 
+    parser.set_defaults(quality = "SQTest")  # Setting default stream quality to 'SQTest'
     parser.set_defaults(outputFile = "dump.ogm")  # Save to dump.ogm by default
     parser.set_defaults(mode = "play")  # Want to play the stream by default
+    parser.set_defaults(kt= "18:00")  # If we are scheduling a recording, do it at 18:00 KST by default
     parser.set_defaults(cache = 30000)  # Caching 30s by default
     (options, args) = parser.parse_args()
 
@@ -140,7 +143,43 @@ def main():
 
     if options.mode == "play":
         print "Playing stream via VLC..."
-    else: print "Dumping stream via VLC..."
+
+    if options.mode == "delayed-save":
+        KST = options.kt.split(":")
+        korean_hours = int(KST[0])
+        korean_minutes = int(KST[1])
+        current_utc_time = datetime.datetime.utcnow()
+        current_korean_time = current_utc_time + datetime.timedelta(hours = 9)
+        target_korean_time = datetime.datetime(current_korean_time.year,
+                                               current_korean_time.month,
+                                               current_korean_time.day,
+                                               korean_hours,
+                                               korean_minutes)
+
+        # If the current korean time is after our target time, we assume that
+        # delayed recording is for the following evening
+        if current_korean_time > target_korean_time:
+            target_korean_time = target_korean_time + datetime.timedelta(days = 1)
+
+        # Finding out the length of time to sleep for
+        record_delta = (target_korean_time - current_korean_time).seconds
+        record_delta_h = divmod(record_delta, 3600)
+        record_delta_m = divmod(record_delta_h[1], 60)
+        record_delta_h = str(record_delta_h[0]) + "h"
+        record_delta_s = str(record_delta_m[1]) + "s"
+        record_delta_m = str(record_delta_m[0]) + "m"
+        nice_record_delta = record_delta_h + " " + \
+                            record_delta_m + " " + \
+                            record_delta_s
+
+        print "Waiting until", options.kt, "KST for recording to begin."
+        print "This will occur after the following wait:", nice_record_delta
+        print ""
+        time.sleep(record_delta)  # Delaying recording until target Korean time    
+        print "Dumping stream via VLC..."
+
+    if options.mode == "save":
+        print "Dumping stream via VLC..."
 
     # Executing vlc
     os.system(cmd)
