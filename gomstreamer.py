@@ -42,9 +42,11 @@ def main():
     parser = OptionParser()
     parser.add_option("-p", "--password", dest = "password", help = "Password to your GOMtv account")
     parser.add_option("-e", "--email", dest = "email", help = "Email your GOMtv account uses")
+    parser.add_option("-m", "--mode", dest = "mode", help = "Mode of use: 'play' or 'save'. Default is 'play'. This parameter is case sensitive.")
     parser.add_option("-q", "--quality", dest = "quality", help = "Stream quality to use: 'HQ', 'SQ' or 'SQTest'. Default is 'SQTest'. This parameter is case sensitive.")
     parser.add_option("-c", "--command", dest = "command", help = "Custom command to run")
     parser.add_option("-d", "--buffer-time", dest = "cache", help = "Cache size in [ms]")
+    parser.add_option("-o", "--output", dest = "outputFile", help = "File to save stream to (Default = dump.ogm)")
 
     # Setting default stream quality to 'SQTest'.
     parser.set_defaults(quality = "SQTest")
@@ -55,6 +57,8 @@ def main():
     else:
         parser.set_defaults(command = vlcLinux)  # On Windows, assuming VLC is in the PATH, this should work.
 
+    parser.set_defaults(outputFile = "dump.ogm")  # Save to dump.ogm by default
+    parser.set_defaults(mode = "play")  # Want to play the stream by default
     parser.set_defaults(cache = 30000)  # Caching 30s by default
     (options, args) = parser.parse_args()
 
@@ -62,8 +66,9 @@ def main():
     if debug:
         print "Email: ", options.email
         print "Password: ", options.password
+        print "Mode: ", options.mode
         print "Quality: ", options.quality
-        print "Command: ", options.command
+        print "Output: ", options.outputFile
 
     # Stopping if email and password are defaults found in play.sh
     if options.email == "youremail@example.com" and options.password == "PASSWORD":
@@ -121,13 +126,23 @@ def main():
                   'url': url
                   }
     cmd = command.substitute(commandArgs)
+
+    # If we're dumping the stream, modify vlc args
+    if options.mode != "play":
+        cmd = cmd + " --demux=dump --demuxdump-file=\"" + options.outputFile + "\""
+
     cmd = cmd + " vlc://quit"
 
     print "Stream URL:", url
     print ""
     print "VLC command:", cmd
     print ""
-    print "Playing stream via VLC..."
+
+    if options.mode == "play":
+        print "Playing stream via VLC..."
+    else: print "Dumping stream via VLC..."
+
+    # Executing vlc
     os.system(cmd)
 
 def checkForUpdate():
