@@ -31,8 +31,10 @@ def main():
     global debug
     debug = False  # Set this to true to print debugging information
 
+    global VERSION
+    VERSION = "0.5.0"
+
     # Application locations and parameters for different operating systems.
-    # May require changing on OSX, can't test.
     vlcOSX = '/Applications/VLC.app/Contents/MacOS/VLC "$url" "--http-caching=$cache"'
     vlcLinux = 'vlc "$url" "--http-caching=$cache"'
 
@@ -69,8 +71,11 @@ def main():
         print "This script will not work correctly without a valid account."
         sys.exit(1)
 
+    # Seeing if we're running the latest version of GOMstreamer
+    checkForUpdate()
+
     gomtvURL = "http://www.gomtv.net"
-    gomtvLiveURL = gomtvURL + "/2011gslsponsors2/live/"
+    gomtvLiveURL = gomtvURL + getSeasonURL()
     gomtvSignInURL = gomtvURL + "/user/loginProcess.gom"
     values = {
              'cmd': 'login',
@@ -124,6 +129,31 @@ def main():
     print ""
     print "Playing stream via VLC..."
     os.system(cmd)
+
+def checkForUpdate():
+    # Grabbing txt file containing version string of latest version
+    updateURL = "http://sjp.co.nz/projects/gomstreamer/version.txt"
+    request = urllib2.Request(updateURL)
+    response = urllib2.urlopen(request)
+    latestVersion = response.read().strip()
+
+    if VERSION < latestVersion:
+        print "================================================================================"
+        print ""
+        print " NOTE: Your version of GOMstreamer is " + VERSION + "."
+        print "       The latest version is " + latestVersion + "."
+        print "       Download the latest version from http://sjp.co.nz/projects/gomstreamer/"
+        print ""
+        print "================================================================================"
+        print ""
+
+def getSeasonURL():
+    # Grabbing txt file containing URL string of latest season
+    seasonURL = "http://sjp.co.nz/projects/gomstreamer/season.txt"
+    request = urllib2.Request(seasonURL)
+    response = urllib2.urlopen(request)
+    latestSeason = response.read().strip()
+    return latestSeason
 
 def parseHTML(response, quality):
     # Seeing what we've received from GOMtv

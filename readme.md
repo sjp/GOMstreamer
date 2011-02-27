@@ -8,7 +8,7 @@ GOMstreamer is a Python utility allowing OSX and other Unix based OS users to wa
 Requirements
 ------------
 - Python 2.x.x
-  with following librarires:
+  with following libraries:
   - urllib2
   - cookielib
   - urllib
@@ -70,3 +70,5 @@ Adding the token `vlc://quit` ensures that VLC will close once the stream has en
 Security
 --------
 GOMstreamer requires one's login information in order to retrieve the stream url. This information is sent to the GOMtv website over the insecure HTTP protocol, just like it would be if you logged in via a browser to start up the GOM Player. Therefore the security risk is exactly the same as if one used the 'official' method to start up the stream. The password and login information are ONLY sent to the GOMtv site and are never stored by the script.
+
+The only other network communication that this application does is contact my server to grab a couple of text files. This is so that the tool can check for updates, and also to grab the latest GSL season's live URL. This avoids the need to update GOMstreamer each season just to get the correct URL. No user information is sent to the server.
