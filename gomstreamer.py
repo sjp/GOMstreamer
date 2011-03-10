@@ -28,6 +28,7 @@ import datetime
 import time
 from optparse import OptionParser
 from string import Template
+
 def main():
 
     global debug
@@ -51,7 +52,6 @@ def main():
     parser.add_option("-c", "--command", dest = "command", help = "Custom command to run")
     parser.add_option("-d", "--buffer-time", dest = "cache", help = "Cache size in [ms]")
 
-
     # Determining which VLC command to use based on the OS that this script is being run on
     if os.name == 'posix' and os.uname()[0] == 'Darwin':
         parser.set_defaults(command = vlcOSX)
@@ -61,7 +61,7 @@ def main():
     parser.set_defaults(quality = "SQTest")  # Setting default stream quality to 'SQTest'
     parser.set_defaults(outputFile = "dump.ogm")  # Save to dump.ogm by default
     parser.set_defaults(mode = "play")  # Want to play the stream by default
-    parser.set_defaults(kt= "18:00")  # If we are scheduling a recording, do it at 18:00 KST by default
+    parser.set_defaults(kt = "18:00")  # If we are scheduling a recording, do it at 18:00 KST by default
     parser.set_defaults(cache = 30000)  # Caching 30s by default
     (options, args) = parser.parse_args()
 
@@ -73,14 +73,18 @@ def main():
         print "Quality: ", options.quality
         print "Output: ", options.outputFile
 
-    # Stopping if email and password are defaults found in play.sh
+    # Stopping if email and password are defaults found in *.sh/command
     if options.email == "youremail@example.com" and options.password == "PASSWORD":
-        print "Enter in your GOMtv email and password into play.sh."
+        print "Enter in your GOMtv email and password into your *.sh or *.command file."
         print "This script will not work correctly without a valid account."
         sys.exit(1)
 
     # Seeing if we're running the latest version of GOMstreamer
     checkForUpdate()
+
+    if options.mode == "delayed-save":
+        # Delaying execution until necessary
+        delay(options.kt)
 
     gomtvURL = "http://www.gomtv.net"
     gomtvLiveURL = gomtvURL + getSeasonURL()
@@ -97,17 +101,20 @@ def main():
     opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(cookiejar))
 
     # Signing into GOMTV
+    print "Signing in."
     request = urllib2.Request(gomtvSignInURL, data)
     urllib2.install_opener(opener)
     response = urllib2.urlopen(request)
 
     if len(cookiejar) == 0:
-        print "Authentification failed. Please check your login and password."
+        print "Error: Authentification failed. Please check your login and password."
         sys.exit(1)
 
     # Collecting data on the Live streaming page
+    print "Grabbing the 'Live' page."
     request = urllib2.Request(gomtvLiveURL)
     response = urllib2.urlopen(request)
+    print "Parsing the 'Live' page for the GOX XML link."
     url = parseHTML(response.read(), options.quality)
 
     if debug:
@@ -116,11 +123,13 @@ def main():
         print ""
 
     # Grab the response of the URL listed on the Live page for a stream
+    print "Grabbing the GOX XML file."
     request = urllib2.Request(url)
     response = urllib2.urlopen(request)
     responseData = response.read()
 
     # Find out the URL found in the response
+    print "Parsing the GOX XML file for the stream URL."
     url = parseStreamURL(responseData, options.quality)
 
     command = Template(options.command)
@@ -136,6 +145,7 @@ def main():
 
     cmd = cmd + " vlc://quit"
 
+    print ""
     print "Stream URL:", url
     print ""
     print "VLC command:", cmd
@@ -143,42 +153,7 @@ def main():
 
     if options.mode == "play":
         print "Playing stream via VLC..."
-
-    if options.mode == "delayed-save":
-        KST = options.kt.split(":")
-        korean_hours = int(KST[0])
-        korean_minutes = int(KST[1])
-        current_utc_time = datetime.datetime.utcnow()
-        current_korean_time = current_utc_time + datetime.timedelta(hours = 9)
-        target_korean_time = datetime.datetime(current_korean_time.year,
-                                               current_korean_time.month,
-                                               current_korean_time.day,
-                                               korean_hours,
-                                               korean_minutes)
-
-        # If the current korean time is after our target time, we assume that
-        # delayed recording is for the following evening
-        if current_korean_time > target_korean_time:
-            target_korean_time = target_korean_time + datetime.timedelta(days = 1)
-
-        # Finding out the length of time to sleep for
-        record_delta = (target_korean_time - current_korean_time).seconds
-        record_delta_h = divmod(record_delta, 3600)
-        record_delta_m = divmod(record_delta_h[1], 60)
-        record_delta_h = str(record_delta_h[0]) + "h"
-        record_delta_s = str(record_delta_m[1]) + "s"
-        record_delta_m = str(record_delta_m[0]) + "m"
-        nice_record_delta = record_delta_h + " " + \
-                            record_delta_m + " " + \
-                            record_delta_s
-
-        print "Waiting until", options.kt, "KST for recording to begin."
-        print "This will occur after the following wait:", nice_record_delta
-        print ""
-        time.sleep(record_delta)  # Delaying recording until target Korean time    
-        print "Dumping stream via VLC..."
-
-    if options.mode == "save":
+    else:
         print "Dumping stream via VLC..."
 
     # Executing vlc
@@ -200,6 +175,48 @@ def checkForUpdate():
         print ""
         print "================================================================================"
         print ""
+
+def delay(kt):
+    KST = kt.split(":")
+    korean_hours = int(KST[0])
+    korean_minutes = int(KST[1])
+
+    # Checking to see whether we have valid times
+    if korean_hours < 0 or korean_hours > 23 or \
+       korean_minutes < 0 or korean_minutes > 59:
+        print "Error: Enter in a valid time in the format HH:MM."
+        print "       HH = hours [0-23], MM = minutes [0-59]."
+
+    current_utc_time = datetime.datetime.utcnow()
+    # Korea is 9 hours ahead of UTC
+    current_korean_time = current_utc_time + datetime.timedelta(hours = 9)
+    target_korean_time = datetime.datetime(current_korean_time.year,
+                                           current_korean_time.month,
+                                           current_korean_time.day,
+                                           korean_hours,
+                                           korean_minutes)
+
+    # If the current korean time is after our target time, we assume that
+    # delayed recording is for the following evening
+    if current_korean_time > target_korean_time:
+        target_korean_time = target_korean_time + datetime.timedelta(days = 1)
+
+    # Finding out the length of time to sleep for
+    # and enabling nice printing of the time.
+    record_delta = (target_korean_time - current_korean_time).seconds
+    record_delta_h = divmod(record_delta, 3600)
+    record_delta_m = divmod(record_delta_h[1], 60)
+    record_delta_h = str(record_delta_h[0]) + "h"
+    record_delta_m = str(record_delta_m[0]) + "m"
+    record_delta_s = str(record_delta_m[1]) + "s"
+    nice_record_delta = record_delta_h + " " + \
+                        record_delta_m + " " + \
+                        record_delta_s
+
+    print "Waiting until", kt, "KST."
+    print "This will occur after waiting " + nice_record_delta + "."
+    print ""
+    time.sleep(record_delta)  # Delaying further execution until target Korean time
 
 def getSeasonURL():
     # Grabbing txt file containing URL string of latest season
@@ -252,6 +269,7 @@ def parseStreamURL(response, quality):
 
     # Grabbing the gomcmd URL
     try:
+        print "Parsing for the HTTP stream."
         streamPattern = r'<REF href="([^"]*)"/>'
         regexResult = re.search(streamPattern, response).group(1)
     except AttributeError:
@@ -261,6 +279,7 @@ def parseStreamURL(response, quality):
     # If we are using a premium ticket, we don't need to parse the URL further
     # we just need to clean it up a bit
     if quality == 'HQ' or quality == 'SQ':
+        print "Stream found, cleaning up URL."
         regexResult = urllib.unquote(regexResult) # Unquoting URL entities
         regexResult = re.sub(r'&amp;', '&', regexResult) # Removing amp;
         return regexResult
@@ -268,6 +287,7 @@ def parseStreamURL(response, quality):
     # Collected the gomcmd URL, now need to extract the correct HTTP URL
     # from the string, only for 'SQTest'
     try:
+        print "Stream found, cleaning up URL."
         patternHTTP = r"(http%3[Aa].+)&quot;"
         regexResult = re.search(patternHTTP, regexResult).group(0)
         regexResult = urllib.unquote(regexResult) # Unquoting URL entities
