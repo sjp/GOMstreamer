@@ -143,6 +143,8 @@ def main():
     if options.mode != "play":
         cmd = cmd + " --demux=dump --demuxdump-file=\"" + options.outputFile + "\""
 
+    # GOM are now blocking via UA strings, copying GOM Player's UA
+    cmd = cmd + " --http-user-agent=\"GomPlayer 2, 1, 28, 5039 (ENG)\""
     cmd = cmd + " vlc://quit"
 
     print ""
