@@ -144,7 +144,7 @@ def main():
         cmd = cmd + " --demux=dump --demuxdump-file=\"" + options.outputFile + "\""
 
     # GOM are now blocking via UA strings, copying GOM Player's CDN UA
-    cmd = cmd + " --http-user-agent=\"KPeerClient\""
+    cmd = cmd + " --http-user-agent KPeerClient"
     cmd = cmd + " vlc://quit"
 
     print ""
