@@ -35,7 +35,7 @@ def main():
     debug = False  # Set this to true to print debugging information
 
     global VERSION
-    VERSION = "0.5.0"
+    VERSION = "0.6.0"
 
     # Application locations and parameters for different operating systems.
     vlcOSX = '/Applications/VLC.app/Contents/MacOS/VLC "$url" "--http-caching=$cache"'
@@ -95,6 +95,7 @@ def main():
              'mb_username': options.email,
              'mb_password': options.password
              }
+    headers = { 'User-Agent' : 'KPeerClient' } # GOM are now blocking via UA strings, copying GOM Player's CDN UA
 
     data = urllib.urlencode(values)
     cookiejar = cookielib.LWPCookieJar()
@@ -102,7 +103,7 @@ def main():
 
     # Signing into GOMTV
     print "Signing in."
-    request = urllib2.Request(gomtvSignInURL, data)
+    request = urllib2.Request(gomtvSignInURL, data, headers)
     urllib2.install_opener(opener)
     response = urllib2.urlopen(request)
 
@@ -139,13 +140,22 @@ def main():
                   }
     cmd = command.substitute(commandArgs)
 
+    # Add verbose output for VLC if we are debugging
+    if debug:
+        cmd = cmd + " --verbose=2"
+    else:
+        cmd = cmd + " --verbose=0"
+
     # If we're dumping the stream, modify vlc args
     if options.mode != "play":
         cmd = cmd + " --demux=dump --demuxdump-file=\"" + options.outputFile + "\""
 
     # GOM are now blocking via UA strings, copying GOM Player's CDN UA
-    cmd = cmd + " --http-user-agent KPeerClient"
-    cmd = cmd + " vlc://quit"
+    cmd = cmd + " --http-user-agent=KPeerClient"
+
+    # Ensuring that VLC quits when the stream ends.
+    # Used instead of vlc://quit to avoid issues when dumping streams.
+    cmd = cmd + " --play-and-exit"
 
     print ""
     print "Stream URL:", url
