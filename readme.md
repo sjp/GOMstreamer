@@ -18,6 +18,7 @@ Requirements
   - datetime
   - time
 - VLC
+- wget (for Linux users) or curl (for OSX users)
 
 Usage
 -----
@@ -33,11 +34,20 @@ For Linux users, edit `play.sh`, `save.sh` and `delayed-save.sh` instead and exe
                           Password to your GOMtv account
     -e EMAIL, --email=EMAIL
                           Email your GOMtv account uses
+    -m MODE, --mode=MODE  Mode of use: 'play', 'save' or 'delayed-save'. Default
+                          is 'play'. This parameter is case sensitive.
     -q QUALITY, --quality=QUALITY
                           Stream quality to use: 'HQ', 'SQ' or 'SQTest'. Default
                           is 'SQTest'. This parameter is case sensitive.
+    -o OUTPUTFILE, --output=OUTPUTFILE
+                          File to save stream to (Default = dump.ogm)
+    -t KT, --time=KT      If the 'delayed-save' mode is used, this option holds
+                          the value of the *Korean* time to record at in HH:MM
+                          format. (Default = '18:00')
     -c COMMAND, --command=COMMAND
                           Custom command to run
+    -w WEBCMD, --webcmd=WEBCMD
+                          wget/curl command to run
     -d CACHE, --buffer-time=CACHE
                           Cache size in [ms]
 

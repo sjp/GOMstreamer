@@ -35,11 +35,13 @@ def main():
     debug = False  # Set this to true to print debugging information
 
     global VERSION
-    VERSION = "0.6.0"
+    VERSION = "0.6.1"
 
     # Application locations and parameters for different operating systems.
-    vlcOSX = '/Applications/VLC.app/Contents/MacOS/VLC "$url" "--http-caching=$cache"'
-    vlcLinux = 'vlc "$url" "--http-caching=$cache"'
+    vlcOSX = '/Applications/VLC.app/Contents/MacOS/VLC - --file-caching $cache'
+    webCmdOSX = 'curl -A KPeerClient "$url"'
+    vlcLinux = 'vlc - --file-caching $cache'
+    webCmdLinux = 'wget -U KPeerClient --tries 1 "$url"'
 
     # Collecting options parsed in from the command line
     parser = OptionParser()
@@ -50,13 +52,16 @@ def main():
     parser.add_option("-o", "--output", dest = "outputFile", help = "File to save stream to (Default = dump.ogm)")
     parser.add_option("-t", "--time", dest = "kt", help = "If the 'delayed-save' mode is used, this option holds the value of the *Korean* time to record at in HH:MM format. (Default = '18:00')")
     parser.add_option("-c", "--command", dest = "command", help = "Custom command to run")
+    parser.add_option("-w", "--webcmd", dest = "webCmd", help = "wget/curl command to run")
     parser.add_option("-d", "--buffer-time", dest = "cache", help = "Cache size in [ms]")
 
     # Determining which VLC command to use based on the OS that this script is being run on
     if os.name == 'posix' and os.uname()[0] == 'Darwin':
         parser.set_defaults(command = vlcOSX)
+        parser.set_defaults(webCmd = webCmdOSX)
     else:
         parser.set_defaults(command = vlcLinux)  # On Windows, assuming VLC is in the PATH, this should work.
+        parser.set_defaults(webCmd = webCmdLinux)
 
     parser.set_defaults(quality = "SQTest")  # Setting default stream quality to 'SQTest'
     parser.set_defaults(outputFile = "dump.ogm")  # Save to dump.ogm by default
@@ -95,7 +100,6 @@ def main():
              'mb_username': options.email,
              'mb_password': options.password
              }
-    headers = { 'User-Agent' : 'KPeerClient' } # GOM are now blocking via UA strings, copying GOM Player's CDN UA
 
     data = urllib.urlencode(values)
     cookiejar = cookielib.LWPCookieJar()
@@ -103,7 +107,7 @@ def main():
 
     # Signing into GOMTV
     print "Signing in."
-    request = urllib2.Request(gomtvSignInURL, data, headers)
+    request = urllib2.Request(gomtvSignInURL, data)
     urllib2.install_opener(opener)
     response = urllib2.urlopen(request)
 
@@ -133,42 +137,55 @@ def main():
     print "Parsing the GOX XML file for the stream URL."
     url = parseStreamURL(responseData, options.quality)
 
+    # Put variables into VLC command
     command = Template(options.command)
-    commandArgs = {
-                  'cache': options.cache,
-                  'url': url
-                  }
-    cmd = command.substitute(commandArgs)
+    vlcCmd = command.substitute({'cache': options.cache})
+
+    # Put variables into wget/curl command
+    webCmd = Template(options.webCmd)
+    webCmd = webCmd.substitute({'url' : url})
 
     # Add verbose output for VLC if we are debugging
     if debug:
-        cmd = cmd + " --verbose=2"
+        vlcCmd = vlcCmd + " --verbose=2"
+        webCmd = webCmd + " -v"
     else:
-        cmd = cmd + " --verbose=0"
-
-    # If we're dumping the stream, modify vlc args
-    if options.mode != "play":
-        cmd = cmd + " --demux=dump --demuxdump-file=\"" + options.outputFile + "\""
-
-    # GOM are now blocking via UA strings, copying GOM Player's CDN UA
-    cmd = cmd + " --http-user-agent=KPeerClient"
+        vlcCmd = vlcCmd + " --verbose=0"
+        webCmd = webCmd + " -q"
 
     # Ensuring that VLC quits when the stream ends.
-    # Used instead of vlc://quit to avoid issues when dumping streams.
-    cmd = cmd + " --play-and-exit"
+    vlcCmd = vlcCmd + " vlc://quit"
+
+    # If playing pipe wget/curl into VLC, else save stream to file
+    if options.mode == "play":
+        if os.name == 'posix' and os.uname()[0] == 'Darwin':
+            # For OSX
+            cmd = webCmd + " -o - | " + vlcCmd
+        else:
+            # For Linux
+            cmd = webCmd + " -O - | " + vlcCmd
+    else:
+        if os.name == 'posix' and os.uname()[0] == 'Darwin':
+            cmd = webCmd + ' -o "' + options.outputFile + '"'
+        else:
+            cmd = webCmd + ' -O "' + options.outputFile + '"'
 
     print ""
     print "Stream URL:", url
     print ""
-    print "VLC command:", cmd
+    print "Command:", cmd
     print ""
 
     if options.mode == "play":
         print "Playing stream via VLC..."
     else:
-        print "Dumping stream via VLC..."
+        if os.name == 'posix' and os.uname()[0] == 'Darwin':
+            app = "curl"
+        else:
+            app = "wget"
+        print "Dumping stream via " + app + "..."
 
-    # Executing vlc
+    # Executing command
     os.system(cmd)
 
 def checkForUpdate():
