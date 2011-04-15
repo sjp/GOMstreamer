@@ -35,7 +35,7 @@ def main():
     debug = False  # Set this to true to print debugging information
 
     global VERSION
-    VERSION = "0.6.2"
+    VERSION = "0.6.3"
 
     # Application locations and parameters for different operating systems.
     vlcOSX = '/Applications/VLC.app/Contents/MacOS/VLC - --file-caching $cache'
@@ -305,7 +305,16 @@ def parseStreamURL(response, quality):
         print "Error: Unable to find the gomcmd URL in the GOX XML file."
         sys.exit(0)
 
+    # If we are using a premium ticket, we don't need to parse the URL further
+    # we just need to clean it up a bit
+    if quality == 'HQ' or quality == 'SQ':
+        print "Stream found, cleaning up URL."
+        regexResult = urllib.unquote(regexResult) # Unquoting URL entities
+        regexResult = re.sub(r'&amp;', '&', regexResult) # Removing amp;
+        return regexResult
+
     # Collected the gomcmd URL, now need to extract the correct HTTP URL
+    # from the string, only for 'SQTest'
     try:
         print "Stream found, cleaning up URL."
         patternHTTP = r"(http%3[Aa].+)&quot;"

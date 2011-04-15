@@ -1,7 +1,7 @@
 #!/bin/sh
 EMAIL='youremail@example.com'
 PASSWORD='PASSWORD'
-QUALITY='SQ'
+QUALITY='SQTest'
 MODE='delayed-save'
 KST='18:00'
 DUMPFILE='dump.ogm'
