@@ -330,6 +330,10 @@ def parseStreamURL(response, quality):
         print "Stream found, cleaning up URL."
         regexResult = urllib.unquote(regexResult) # Unquoting URL entities
         regexResult = re.sub(r'&amp;', '&', regexResult) # Removing amp;
+        if regexResult.startswith('gomp2p://'):
+            # GOM is now giving gomp2p links even for SQ
+            print 'Extracting stream URL from gomp2p link.'
+            regexResult = re.sub(r'.*LiveAddr=', '', regexResult)
         return regexResult
 
     # Collected the gomcmd URL, now need to extract the correct HTTP URL
