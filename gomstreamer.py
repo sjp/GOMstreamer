@@ -324,31 +324,15 @@ def parseStreamURL(response, quality):
         print "Error: Unable to find the gomcmd URL in the GOX XML file."
         sys.exit(0)
 
-    # If we are using a premium ticket, we don't need to parse the URL further
-    # we just need to clean it up a bit
-    if quality == 'HQ' or quality == 'SQ':
-        print "Stream found, cleaning up URL."
-        regexResult = urllib.unquote(regexResult) # Unquoting URL entities
-        regexResult = re.sub(r'&amp;', '&', regexResult) # Removing amp;
-        if regexResult.startswith('gomp2p://'):
-            # GOM is now giving gomp2p links even for SQ
-            print 'Extracting stream URL from gomp2p link.'
-            regexResult = re.sub(r'.*LiveAddr=', '', regexResult)
-        return regexResult
-
-    # Collected the gomcmd URL, now need to extract the correct HTTP URL
-    # from the string, only for 'SQTest'
-    try:
-        print "Stream found, cleaning up URL."
-        patternHTTP = r"(http%3[Aa].+)&quot;"
-        regexResult = re.search(patternHTTP, regexResult).group(0)
-        regexResult = urllib.unquote(regexResult) # Unquoting URL entities
-        regexResult = re.sub(r'&amp;', '&', regexResult) # Removing amp;
-        regexResult = re.sub(r'&quot;', '', regexResult) # Removing &quot;
-    except AttributeError:
-        print "Error: Unable to extract the HTTP stream from the gomcmd URL."
-        sys.exit(0)
-
+    print "Stream found, cleaning up URL."
+    regexResult = urllib.unquote(regexResult)
+    regexResult = re.sub(r'&amp;', '&', regexResult)
+    # SQ and SQTest streams can be gomp2p links, with actual stream address passed as a parameter.
+    if regexResult.startswith('gomp2p://'):
+        print 'Extracting stream URL from gomp2p link.'
+        regexResult, n = re.subn(r'^.*LiveAddr=', '', regexResult)
+        if not n:
+            print 'Warning: failed to extract stream URL from %r' % regexResult
     return regexResult
 
 # Actually run the script
