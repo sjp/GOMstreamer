@@ -22,6 +22,7 @@ limitations under the License.
 import urllib2
 import cookielib
 import urllib
+from urlparse import urljoin
 import StringIO
 import re
 import os
@@ -128,9 +129,8 @@ def main():
         # Delaying execution until necessary
         delay(options.kt)
 
-    gomtvURL = "http://www.gomtv.net"
-    gomtvLiveURL = gomtvURL + getSeasonURL()
-    gomtvSignInURL = gomtvURL + "/user/loginProcess.gom"
+    gomtvURL = 'http://www.gomtv.net'
+    gomtvSignInURL = urljoin(gomtvURL, '/user/loginProcess.gom')
     values = {
              'cmd': 'login',
              'rememberme': '1',
@@ -153,7 +153,9 @@ def main():
         sys.exit(1)
 
     # Collecting data on the Live streaming page
-    print "Grabbing the 'Live' page."
+    print 'Getting season url...'
+    gomtvLiveURL = getSeasonURL(gomtvURL)
+    print 'Grabbing the \'Live\' page (%s).' % gomtvLiveURL
     request = urllib2.Request(gomtvLiveURL)
     response = urllib2.urlopen(request)
     print "Parsing the 'Live' page for the GOX XML link."
@@ -214,21 +216,29 @@ def main():
         pass
 
 def checkForUpdate():
-    # Grabbing txt file containing version string of latest version
-    updateURL = "http://sjp.co.nz/projects/gomstreamer/version.txt"
-    request = urllib2.Request(updateURL)
-    response = urllib2.urlopen(request)
-    latestVersion = response.read().strip()
+    print 'Checking for update...',
+    try:
+        # Grabbing txt file containing version string of latest version
+        updateURL = "http://sjp.co.nz/projects/gomstreamer/version.txt"
+        request = urllib2.Request(updateURL)
+        response = urllib2.urlopen(request)
+        latestVersion = response.read().strip()
 
-    if VERSION < latestVersion:
-        print "================================================================================"
-        print ""
-        print " NOTE: Your version of GOMstreamer is " + VERSION + "."
-        print "       The latest version is " + latestVersion + "."
-        print "       Download the latest version from http://sjp.co.nz/projects/gomstreamer/"
-        print ""
-        print "================================================================================"
-        print ""
+        if VERSION < latestVersion:
+            print
+            print "================================================================================"
+            print
+            print " NOTE: Your version of GOMstreamer is " + VERSION + "."
+            print "       The latest version is " + latestVersion + "."
+            print "       Download the latest version from http://sjp.co.nz/projects/gomstreamer/"
+            print ""
+            print "================================================================================"
+            print
+        else:
+            print 'have the latest version'
+    except Exception as exc:
+        print 'Failed to check version:', exc
+
 
 def delay(kt):
     KST = kt.split(":")
@@ -266,13 +276,30 @@ def delay(kt):
     print ""
     time.sleep(record_delta)  # Delaying further execution until target Korean time
 
-def getSeasonURL():
+def getSeasonURL(gomtvURL):
+    try:
+        url = getSeasonURL_gom(gomtvURL)
+    except Exception as exc:
+        print 'Failed to get season url from gomtv.net: ', exc
+        print 'Getting season url from sjp.co.nz...'
+        url = getSeasonURL_sjp()
+    return urljoin(gomtvURL, url)
+
+def getSeasonURL_sjp():
     # Grabbing txt file containing URL string of latest season
     seasonURL = "http://sjp.co.nz/projects/gomstreamer/season.txt"
     request = urllib2.Request(seasonURL)
     response = urllib2.urlopen(request)
     latestSeason = response.read().strip()
     return latestSeason
+
+def getSeasonURL_gom(gomtvURL):
+    # Getting season url from the 'Go Live!' button on the main page. 
+    request = urllib2.Request(gomtvURL)
+    response = urllib2.urlopen(request)
+    match = re.search('<a href="([^"]*)" class="golive_btn', response.read())
+    assert match, 'golive_btn href not found'
+    return match.group(1)
 
 def parseHTML(response, quality):
     # Seeing what we've received from GOMtv
