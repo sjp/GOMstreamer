@@ -154,7 +154,7 @@ def main():
 
     # Collecting data on the Live streaming page
     print 'Getting season url...'
-    gomtvLiveURL = getSeasonURL(gomtvURL)
+    gomtvLiveURL = getLivePageURL(gomtvURL)
     print 'Grabbing the \'Live\' page (%s).' % gomtvLiveURL
     request = urllib2.Request(gomtvLiveURL)
     response = urllib2.urlopen(request)
@@ -276,14 +276,14 @@ def delay(kt):
     print ""
     time.sleep(record_delta)  # Delaying further execution until target Korean time
 
-def getSeasonURL(gomtvURL):
+def getLivePageURL(gomtvURL):
     try:
-        url = getSeasonURL_gom(gomtvURL)
+        seasonURL = getSeasonURL_gom(gomtvURL)
     except Exception as exc:
         print 'Failed to get season url from gomtv.net: ', exc
         print 'Getting season url from sjp.co.nz...'
-        url = getSeasonURL_sjp()
-    return urljoin(gomtvURL, url)
+        seasonURL = getSeasonURL_sjp()
+    return urljoin(gomtvURL, seasonURL)
 
 def getSeasonURL_sjp():
     # Grabbing txt file containing URL string of latest season
