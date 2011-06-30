@@ -72,7 +72,7 @@ def main():
     else:
         print 'Unrecognized OS'
         sys.exit(1)
-    vlcCmdDefault = vlcPath + ' - --file-caching $cache vlc://quit'
+    vlcCmdDefault = vlcPath + ' --file-caching $cache $debug - vlc://quit'
 
     # Collecting options parsed in from the command line
     parser = OptionParser()
@@ -178,7 +178,8 @@ def main():
 
     # Put variables into VLC command
     vlcCmd = Template(options.vlcCmd).substitute(
-            {'cache': options.cache})
+            {'cache': options.cache, 
+             'debug' : ('', '--verbose=2')[debug]})
 
     # Put variables into wget/curl command
     outputFile = '-' if options.mode == "play" else options.outputFile
@@ -187,7 +188,6 @@ def main():
 
     # Add verbose output for VLC if we are debugging
     if debug:
-        vlcCmd = vlcCmd + " --verbose=2"
         webCmd = webCmd + " -v"
 
     # If playing pipe wget/curl into VLC, else save stream to file
