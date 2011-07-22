@@ -7,7 +7,7 @@ GOMstreamer is a Python utility allowing OSX and other Unix based OS users to wa
 
 Requirements
 ------------
-- Python 2.x.x
+- Python 2.7.x
   with following libraries:
   - urllib2
   - cookielib
