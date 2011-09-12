@@ -158,8 +158,28 @@ def main():
     print 'Grabbing the \'Live\' page (%s).' % gomtvLiveURL
     request = urllib2.Request(gomtvLiveURL)
     response = urllib2.urlopen(request)
+    response = response.read()
+
+    # If a special event occurs, we know that the live page response
+    # will just be some JavaScript that redirects the browser to the
+    # real live page. We assume that the entireity of this JavaScript
+    # is less than 200 characters long, and that real live pages are
+    # more than that.
+    if len(response) < 200:
+        # Grabbing the real live page URL
+        gomtvLiveURL = getEventLivePageURL(gomtvLiveURL, response)
+        print "Redirecting to the Event\'s 'Live' page (%s)." % gomtvLiveURL
+        request = urllib2.Request(gomtvLiveURL)
+        response = urllib2.urlopen(request)
+        response = response.read()
+        # Most events are free and have both HQ and SQ streams, but
+        # not SQTest. As a result, assume we really want SQ after asking
+        # for SQTest, makes it more seamless between events and GSL.
+        if options.quality == "SQTest":
+            options.quality = "SQ"
+
     print "Parsing the 'Live' page for the GOX XML link."
-    url = parseHTML(response.read(), options.quality)
+    url = parseHTML(response, options.quality)
 
     if debug:
         print "Printing URL on Live page:"
@@ -239,7 +259,6 @@ def checkForUpdate():
     except Exception as exc:
         print 'Failed to check version:', exc
 
-
 def delay(kt):
     KST = kt.split(":")
     korean_hours, korean_minutes = map(int, KST)
@@ -284,6 +303,11 @@ def getLivePageURL(gomtvURL):
         print 'Getting season url from sjp.co.nz...'
         seasonURL = getSeasonURL_sjp()
     return urljoin(gomtvURL, seasonURL)
+
+def getEventLivePageURL(gomtvLiveURL, response):
+    match = re.search(' \"(.*)\";', response)
+    assert match, 'Event Live Page URL not found'
+    return urljoin(gomtvLiveURL, match.group(1))
 
 def getSeasonURL_sjp():
     # Grabbing txt file containing URL string of latest season
@@ -360,6 +384,9 @@ def parseStreamURL(response, quality):
         regexResult, n = re.subn(r'^.*LiveAddr=', '', regexResult)
         if not n:
             print 'Warning: failed to extract stream URL from %r' % regexResult
+    # Cosmetics, getting rid of the HTML entity, we don't
+    # need either of the " character or &quot;
+    regexResult = regexResult.replace('&quot;', '')
     return regexResult
 
 # Actually run the script
