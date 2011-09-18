@@ -36,7 +36,7 @@ from string import Template
 debug = True
 debug = False  # Comment this line to print debugging information
 
-VERSION = "0.7.0"
+VERSION = "0.7.1"
 
 def main():
     curlCmd = 'curl -A KPeerClient "$url" -o "$output"'
