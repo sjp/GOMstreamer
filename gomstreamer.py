@@ -36,7 +36,7 @@ from string import Template
 debug = True
 debug = False  # Comment this line to print debugging information
 
-VERSION = "0.7.1"
+VERSION = "0.7.2"
 
 def main():
     curlCmd = 'curl -A KPeerClient "$url" -o "$output"'
@@ -295,12 +295,17 @@ def delay(kt):
     print ""
     time.sleep(record_delta)  # Delaying further execution until target Korean time
 
-def getLivePageURL(gomtvURL):
-    try:
-        seasonURL = getSeasonURL_gom(gomtvURL)
-    except Exception as exc:
-        print 'Failed to get season url from gomtv.net: ', exc
-        print 'Getting season url from sjp.co.nz...'
+def getLivePageURL(gomtvURL, method = "url"):
+    if method == "url":
+        seasonURL = "/main/goLive.gom"
+    elif method == "html":
+        try:
+            seasonURL = getSeasonURL_gom(gomtvURL)
+        except Exception as exc:
+            print 'Failed to get season url from gomtv.net: ', exc
+            print 'Getting season url from sjp.co.nz...'
+            seasonURL = getSeasonURL_sjp()
+    else:
         seasonURL = getSeasonURL_sjp()
     return urljoin(gomtvURL, seasonURL)
 
@@ -321,7 +326,7 @@ def getSeasonURL_gom(gomtvURL):
     # Getting season url from the 'Go Live!' button on the main page. 
     request = urllib2.Request(gomtvURL)
     response = urllib2.urlopen(request)
-    match = re.search('<a href="([^"]*)" class="golive_btn', response.read())
+    match = re.search('.*liveicon"><a href="([^"]*)"', response.read())
     assert match, 'golive_btn href not found'
     return match.group(1)
 
