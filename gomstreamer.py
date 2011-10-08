@@ -36,7 +36,7 @@ from string import Template
 debug = True
 debug = False  # Comment this line to print debugging information
 
-VERSION = "0.7.2"
+VERSION = "0.7.3"
 
 def main():
     curlCmd = 'curl -A KPeerClient "$url" -o "$output"'
@@ -130,13 +130,15 @@ def main():
         delay(options.kt)
 
     gomtvURL = 'http://www.gomtv.net'
-    gomtvSignInURL = urljoin(gomtvURL, '/user/loginProcess.gom')
+    gomtvSignInURL = 'https://ssl.gomtv.net/userinfo/loginProcess.gom'
     values = {
              'cmd': 'login',
              'rememberme': '1',
              'mb_username': options.email,
              'mb_password': options.password
              }
+    # Now expects to log in only via the website. Thanks chrippa.
+    headers = {'Referer': 'http://www.gomtv.net/'}
 
     data = urllib.urlencode(values)
     cookiejar = cookielib.LWPCookieJar()
@@ -144,7 +146,7 @@ def main():
 
     # Signing into GOMTV
     print "Signing in."
-    request = urllib2.Request(gomtvSignInURL, data)
+    request = urllib2.Request(gomtvSignInURL, data, headers)
     urllib2.install_opener(opener)
     response = urllib2.urlopen(request)
 
