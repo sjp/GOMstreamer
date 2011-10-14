@@ -45,7 +45,7 @@ else:
     logging.basicConfig(level = logging.ERROR,
                         format='%(levelname)s %(message)s')
 
-VERSION = "0.7.3"
+VERSION = '0.7.3'
 
 def main():
     curlCmd = 'curl -A KPeerClient "$url" -o "$output"'
@@ -85,35 +85,35 @@ def main():
 
     # Collecting options parsed in from the command line
     parser = OptionParser()
-    parser.add_option("-p", "--password", dest = "password", help = "Password to your GOMtv account")
-    parser.add_option("-e", "--email", dest = "email", help = "Email your GOMtv account uses")
-    parser.add_option("-m", "--mode", dest = "mode",
-            help = "Mode of use: 'play', 'save' or 'delayed-save'. Default is 'play'. This parameter is case sensitive.",
-            choices=['play', 'save', 'delayed-save'])
-    parser.add_option("-q", "--quality", dest = "quality", help = "Stream quality to use: 'HQ', 'SQ' or 'SQTest'. Default is 'SQTest'. This parameter is case sensitive.")
-    parser.add_option("-o", "--output", dest = "outputFile", help = "File to save stream to (Default = dump.ogm)")
-    parser.add_option("-t", "--time", dest = "kt", help = "If the 'delayed-save' mode is used, this option holds the value of the *Korean* time to record at in HH:MM format. (Default = '18:00')")
-    parser.add_option("-v", "--vlccmd", "-c", "--command", dest = "vlcCmd", help = "Custom command for playing stream from stdout")
-    parser.add_option("-w", "--webcmd", dest = "webCmd", help = "Custom command for producing stream on stdout")
-    parser.add_option("-d", "--buffer-time", dest = "cache", help = "VLC cache size in [ms]")
+    parser.add_option('-p', '--password', dest = 'password', help = 'Password to your GOMtv account')
+    parser.add_option('-e', '--email', dest = 'email', help = 'Email your GOMtv account uses')
+    parser.add_option('-m', '--mode', dest = 'mode',
+                      help = 'Mode of use: "play", "save" or "delayed-save". Default is "play". This parameter is case sensitive.',
+                      choices=['play', 'save', 'delayed-save'])
+    parser.add_option('-q', '--quality', dest = 'quality', help = 'Stream quality to use: "HQ", "SQ" or "SQTest". Default is "SQTest". This parameter is case sensitive.')
+    parser.add_option('-o', '--output', dest = 'outputFile', help = 'File to save stream to (Default = "dump.ogm")')
+    parser.add_option('-t', '--time', dest = 'kt', help = 'If the "delayed-save" mode is used, this option holds the value of the *Korean* time to record at in HH:MM format. (Default = "18:00")')
+    parser.add_option('-v', '--vlccmd', '-c', '--command', dest = 'vlcCmd', help = 'Custom command for playing stream from stdout')
+    parser.add_option('-w', '--webcmd', dest = 'webCmd', help = 'Custom command for producing stream on stdout')
+    parser.add_option('-d', '--buffer-time', dest = 'cache', help = 'VLC cache size in [ms]')
 
     parser.set_defaults(vlcCmd = vlcCmdDefault)
     parser.set_defaults(webCmd = webCmdDefault)
-    parser.set_defaults(quality = "SQTest")  # Setting default stream quality to 'SQTest'
-    parser.set_defaults(outputFile = "dump.ogm")  # Save to dump.ogm by default
-    parser.set_defaults(mode = "play")  # Want to play the stream by default
-    parser.set_defaults(kt = "18:00")  # If we are scheduling a recording, do it at 18:00 KST by default
+    parser.set_defaults(quality = 'SQTest')  # Setting default stream quality to 'SQTest'
+    parser.set_defaults(outputFile = 'dump.ogm')  # Save to dump.ogm by default
+    parser.set_defaults(mode = 'play')  # Want to play the stream by default
+    parser.set_defaults(kt = '18:00')  # If we are scheduling a recording, do it at 18:00 KST by default
     parser.set_defaults(cache = 30000)  # Caching 30s by default
     options, args = parser.parse_args()
 
     # Printing out parameters
-    logging.debug("Email: %s", options.email)
-    logging.debug("Password: %s", options.password)
-    logging.debug("Mode: %s", options.mode)
-    logging.debug("Quality: %s", options.quality)
-    logging.debug("Output: %s", options.outputFile)
-    logging.debug("VlcCmd: %s", options.vlcCmd)
-    logging.debug("WebCmd: %s", options.webCmd)
+    logging.debug('Email: %s', options.email)
+    logging.debug('Password: %s', options.password)
+    logging.debug('Mode: %s', options.mode)
+    logging.debug('Quality: %s', options.quality)
+    logging.debug('Output: %s', options.outputFile)
+    logging.debug('VlcCmd: %s', options.vlcCmd)
+    logging.debug('WebCmd: %s', options.webCmd)
 
     # additional sanity checks
     if len(args):
@@ -124,16 +124,16 @@ def main():
         parser.error('--password must be specified')
 
     # Stopping if email and password are defaults found in *.sh/command/cmd
-    if options.email == "youremail@example.com" and options.password == "PASSWORD":
-        errMsg = "Enter your GOMtv email and password into your *.sh, *.command, or *.cmd file."
-        errMsg = errMsg + "\nThis script will not work correctly without a valid account."
+    if options.email == 'youremail@example.com' and options.password == 'PASSWORD':
+        errMsg = 'Enter your GOMtv email and password into your *.sh, *.command, or *.cmd file.'
+        errMsg = errMsg + '\nThis script will not work correctly without a valid account.'
         logging.error(errMsg)
         sys.exit(1)
 
     # Seeing if we're running the latest version of GOMstreamer
     checkForUpdate()
 
-    if options.mode == "delayed-save":
+    if options.mode == 'delayed-save':
         # Delaying execution until necessary
         delay(options.kt)
 
@@ -153,13 +153,13 @@ def main():
     opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(cookiejar))
 
     # Signing into GOMTV
-    print "Signing in."
+    print 'Signing in.'
     request = urllib2.Request(gomtvSignInURL, data, headers)
     urllib2.install_opener(opener)
     response = urllib2.urlopen(request)
 
     if len(cookiejar) == 0:
-        logging.error("Authentification failed. Please check your login and password.")
+        logging.error('Authentification failed. Please check your login and password.')
         sys.exit(1)
 
     # Collecting data on the Live streaming page
@@ -188,19 +188,19 @@ def main():
         if options.quality == "SQTest":
             options.quality = "SQ"
 
-    print "Parsing the 'Live' page for the GOX XML link."
+    print 'Parsing the "Live" page for the GOX XML link.'
     url = parseHTML(response, options.quality)
 
-    logging.debug("Printing URL on Live page: %s", url)
+    logging.debug('Printing URL on Live page: %s', url)
 
     # Grab the response of the URL listed on the Live page for a stream
-    print "Grabbing the GOX XML file."
+    print 'Grabbing the GOX XML file.'
     request = urllib2.Request(url)
     response = urllib2.urlopen(request)
     responseData = response.read()
 
     # Find out the URL found in the response
-    print "Parsing the GOX XML file for the stream URL."
+    print 'Parsing the GOX XML file for the stream URL.'
     url = parseStreamURL(responseData, options.quality)
 
     # Put variables into VLC command
@@ -209,28 +209,28 @@ def main():
              'debug' : ('', '--verbose=2')[debug]})
 
     # Put variables into wget/curl command
-    outputFile = '-' if options.mode == "play" else options.outputFile
+    outputFile = '-' if options.mode == 'play' else options.outputFile
     webCmd = Template(options.webCmd).substitute(
             {'url' : url, 'output' : outputFile})
 
     # Add verbose output for VLC if we are debugging
     if debug:
-        webCmd = webCmd + " -v"
+        webCmd = webCmd + ' -v'
 
     # If playing pipe wget/curl into VLC, else save stream to file
     # We have already substituted $output with correct target.
-    if options.mode == "play":
-        cmd = webCmd + " | " + vlcCmd
+    if options.mode == 'play':
+        cmd = webCmd + ' | ' + vlcCmd
     else:
         cmd = webCmd
 
-    print ""
-    print "Stream URL:", url
-    print ""
-    print "Command:", cmd
-    print ""
+    print ''
+    print 'Stream URL:', url
+    print ''
+    print 'Command:', cmd
+    print ''
 
-    if options.mode == "play":
+    if options.mode == 'play':
         print 'Playing stream...'
     else:
         print 'Saving stream as "' + outputFile + '" ...'
@@ -246,35 +246,34 @@ def checkForUpdate():
     print 'Checking for update...',
     try:
         # Grabbing txt file containing version string of latest version
-        updateURL = "http://sjp.co.nz/projects/gomstreamer/version.txt"
+        updateURL = 'http://sjp.co.nz/projects/gomstreamer/version.txt'
         request = urllib2.Request(updateURL)
         response = urllib2.urlopen(request)
         latestVersion = response.read().strip()
 
         if VERSION < latestVersion:
-            print
-            print "================================================================================"
-            print
-            print " NOTE: Your version of GOMstreamer is " + VERSION + "."
-            print "       The latest version is " + latestVersion + "."
-            print "       Download the latest version from http://sjp.co.nz/projects/gomstreamer/"
-            print ""
-            print "================================================================================"
-            print
+            print ''
+            print '================================================================================'
+            print ''
+            print ' NOTE: Your version of GOMstreamer is ' + VERSION + '.'
+            print '       The latest version is ' + latestVersion + '.'
+            print '       Download the latest version from http://sjp.co.nz/projects/gomstreamer/'
+            print ''
+            print '================================================================================'
+            print ''
         else:
             print 'have the latest version'
     except Exception as exc:
-        print 'Failed to check version:', exc
+        logging.error('Failed to check version: %s', exc)
 
 def delay(kt):
-    KST = kt.split(":")
+    KST = kt.split(':')
     korean_hours, korean_minutes = map(int, KST)
 
     # Checking to see whether we have valid times
     if korean_hours < 0 or korean_hours > 23 or \
        korean_minutes < 0 or korean_minutes > 59:
-        print "Error: Enter in a valid time in the format HH:MM."
-        print "       HH = hours [0-23], MM = minutes [0-59]."
+        logging.error('Enter in a valid time in the format HH:MM. HH = hours [0-23], MM = minutes [0-59].')
 
     current_utc_time = datetime.datetime.utcnow()
     # Korea is 9 hours ahead of UTC
@@ -297,15 +296,15 @@ def delay(kt):
     hours, minutes = divmod(minutes, 60)
     nice_record_delta = '%dh %dm %ds' % (hours, minutes, seconds)
 
-    print "Waiting until", kt, "KST."
-    print "This will occur after waiting " + nice_record_delta + "."
-    print ""
+    print 'Waiting until', kt, 'KST.'
+    print 'This will occur after waiting ' + nice_record_delta + '.'
+    print ''
     time.sleep(record_delta)  # Delaying further execution until target Korean time
 
-def getLivePageURL(gomtvURL, method = "url"):
-    if method == "url":
-        seasonURL = "/main/goLive.gom"
-    elif method == "html":
+def getLivePageURL(gomtvURL, method = 'url'):
+    if method == 'url':
+        seasonURL = '/main/goLive.gom'
+    elif method == 'html':
         try:
             seasonURL = getSeasonURL_gom(gomtvURL)
         except Exception as exc:
@@ -323,7 +322,7 @@ def getEventLivePageURL(gomtvLiveURL, response):
 
 def getSeasonURL_sjp():
     # Grabbing txt file containing URL string of latest season
-    seasonURL = "http://sjp.co.nz/projects/gomstreamer/season.txt"
+    seasonURL = 'http://sjp.co.nz/projects/gomstreamer/season.txt'
     request = urllib2.Request(seasonURL)
     response = urllib2.urlopen(request)
     latestSeason = response.read().strip()
@@ -339,51 +338,51 @@ def getSeasonURL_gom(gomtvURL):
 
 def parseHTML(response, quality):
     # Seeing what we've received from GOMtv
-    logging.debug("Response: %s", response)
+    logging.debug('Response: %s', response)
 
     # Parsing through the live page for a link to the gox XML file.
     # Quality is simply passed as a URL parameter e.g. HQ, SQ, SQTest
     try:
-        patternHTML = r"http://www.gomtv.net/gox[^;]+;"
+        patternHTML = r'http://www.gomtv.net/gox[^;]+;'
         urlFromHTML = re.search(patternHTML, response).group(0)
-        urlFromHTML = re.sub(r"\" \+ playType \+ \"", quality, urlFromHTML)
-        urlFromHTML = re.sub(r"\"[^;]+;", "", urlFromHTML)
+        urlFromHTML = re.sub(r'\" \+ playType \+ \"', quality, urlFromHTML)
+        urlFromHTML = re.sub(r'\"[^;]+;', '', urlFromHTML)
     except AttributeError:
-        print "Error: Unable to find the majority of the GOMtv XML URL on the Live page."
+        logging.error('Unable to find the majority of the GOMtv XML URL on the Live page.')
         sys.exit(0)
 
     # Finding the title of the stream, probably not necessary but
     # done for completeness
     try:
-        patternTitle = r"this\.title[^;]+;"
+        patternTitle = r'this\.title[^;]+;'
         titleFromHTML = re.search(patternTitle, response).group(0)
-        titleFromHTML = re.search(r"\"(.*)\"", titleFromHTML).group(0)
-        titleFromHTML = re.sub(r"\"", "", titleFromHTML)
+        titleFromHTML = re.search(r'\"(.*)\"', titleFromHTML).group(0)
+        titleFromHTML = re.sub(r'\"', '', titleFromHTML)
     except AttributeError:
-        print "Error: Unable to find the stream title on the Live page."
+        logging.error('Unable to find the stream title on the Live page.')
         sys.exit(0)
 
     return (urlFromHTML + titleFromHTML)
 
 def parseStreamURL(response, quality):
     # Observing the GOX XML file containing the stream link
-    logging.debug("GOX XML: %s", response)
+    logging.debug('GOX XML: %s', response)
 
     # The response for the GOX XML if an incorrect stream quality is chosen is 1002.
-    if (response == "1002"):
-        print "Error: A premium ticket is required to watch higher quality streams, please choose 'SQTest' instead."
+    if (response == '1002'):
+        logging.error('A premium ticket is required to watch higher quality streams, please choose "SQTest" instead.')
         sys.exit(0)
 
     # Grabbing the gomcmd URL
     try:
-        print "Parsing for the HTTP stream."
+        print 'Parsing for the HTTP stream.'
         streamPattern = r'<REF href="([^"]*)"/>'
         regexResult = re.search(streamPattern, response).group(1)
     except AttributeError:
-        print "Error: Unable to find the gomcmd URL in the GOX XML file."
+        logging.error('Error: Unable to find the gomcmd URL in the GOX XML file.')
         sys.exit(0)
 
-    print "Stream found, cleaning up URL."
+    print 'Stream found, cleaning up URL.'
     regexResult = urllib.unquote(regexResult)
     regexResult = re.sub(r'&amp;', '&', regexResult)
     # SQ and SQTest streams can be gomp2p links, with actual stream address passed as a parameter.
@@ -391,12 +390,12 @@ def parseStreamURL(response, quality):
         print 'Extracting stream URL from gomp2p link.'
         regexResult, n = re.subn(r'^.*LiveAddr=', '', regexResult)
         if not n:
-            print 'Warning: failed to extract stream URL from %r' % regexResult
+            logging.warning('failed to extract stream URL from %r', regexResult)
     # Cosmetics, getting rid of the HTML entity, we don't
     # need either of the " character or &quot;
     regexResult = regexResult.replace('&quot;', '')
     return regexResult
 
 # Actually run the script
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()
