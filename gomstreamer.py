@@ -19,22 +19,31 @@ See the License for the specific language governing permissions and
 limitations under the License.
 '''
 
-import urllib2
 import cookielib
-import urllib
-from urlparse import urljoin
-import StringIO
-import re
-import os
-from os import path as os_path
-import sys
 import datetime
+import logging
+import os
+import re
+import StringIO
+import sys
 import time
+import urllib
+import urllib2
 from optparse import OptionParser
+from os import path as os_path
 from string import Template
+from urlparse import urljoin
 
 debug = True
 debug = False  # Comment this line to print debugging information
+
+# We only see log messages at the DEBUG level.
+if debug:
+    logging.basicConfig(level = logging.DEBUG,
+                        format='%(levelname)s %(message)s')
+else:
+    logging.basicConfig(level = logging.ERROR,
+                        format='%(levelname)s %(message)s')
 
 VERSION = "0.7.3"
 
@@ -70,7 +79,7 @@ def main():
         vlcPath = '"' + find_vlc() + '"'
         webCmdDefault = curlCmd
     else:
-        print 'Unrecognized OS'
+        logging.error('Unrecognized OS')
         sys.exit(1)
     vlcCmdDefault = vlcPath + ' --file-caching $cache $debug - vlc://quit'
 
@@ -90,7 +99,6 @@ def main():
 
     parser.set_defaults(vlcCmd = vlcCmdDefault)
     parser.set_defaults(webCmd = webCmdDefault)
-
     parser.set_defaults(quality = "SQTest")  # Setting default stream quality to 'SQTest'
     parser.set_defaults(outputFile = "dump.ogm")  # Save to dump.ogm by default
     parser.set_defaults(mode = "play")  # Want to play the stream by default
@@ -99,14 +107,13 @@ def main():
     options, args = parser.parse_args()
 
     # Printing out parameters
-    if debug:
-        print "Email: ", options.email
-        print "Password: ", options.password
-        print "Mode: ", options.mode
-        print "Quality: ", options.quality
-        print "Output: ", options.outputFile
-        print "VlcCmd: ", options.vlcCmd
-        print "WebCmd: ", options.webCmd
+    logging.debug("Email: %s", options.email)
+    logging.debug("Password: %s", options.password)
+    logging.debug("Mode: %s", options.mode)
+    logging.debug("Quality: %s", options.quality)
+    logging.debug("Output: %s", options.outputFile)
+    logging.debug("VlcCmd: %s", options.vlcCmd)
+    logging.debug("WebCmd: %s", options.webCmd)
 
     # additional sanity checks
     if len(args):
@@ -118,8 +125,9 @@ def main():
 
     # Stopping if email and password are defaults found in *.sh/command/cmd
     if options.email == "youremail@example.com" and options.password == "PASSWORD":
-        print "Enter your GOMtv email and password into your *.sh, *.command, or *.cmd file."
-        print "This script will not work correctly without a valid account."
+        errMsg = "Enter your GOMtv email and password into your *.sh, *.command, or *.cmd file."
+        errMsg = errMsg + "\nThis script will not work correctly without a valid account."
+        logging.error(errMsg)
         sys.exit(1)
 
     # Seeing if we're running the latest version of GOMstreamer
@@ -151,7 +159,7 @@ def main():
     response = urllib2.urlopen(request)
 
     if len(cookiejar) == 0:
-        print "Error: Authentification failed. Please check your login and password."
+        logging.error("Authentification failed. Please check your login and password.")
         sys.exit(1)
 
     # Collecting data on the Live streaming page
@@ -183,10 +191,7 @@ def main():
     print "Parsing the 'Live' page for the GOX XML link."
     url = parseHTML(response, options.quality)
 
-    if debug:
-        print "Printing URL on Live page:"
-        print url
-        print ""
+    logging.debug("Printing URL on Live page: %s", url)
 
     # Grab the response of the URL listed on the Live page for a stream
     print "Grabbing the GOX XML file."
@@ -334,9 +339,7 @@ def getSeasonURL_gom(gomtvURL):
 
 def parseHTML(response, quality):
     # Seeing what we've received from GOMtv
-    if debug:
-        print "Response:"
-        print response
+    logging.debug("Response: %s", response)
 
     # Parsing through the live page for a link to the gox XML file.
     # Quality is simply passed as a URL parameter e.g. HQ, SQ, SQTest
@@ -364,9 +367,7 @@ def parseHTML(response, quality):
 
 def parseStreamURL(response, quality):
     # Observing the GOX XML file containing the stream link
-    if debug:
-        print "GOX XML:"
-        print response
+    logging.debug("GOX XML: %s", response)
 
     # The response for the GOX XML if an incorrect stream quality is chosen is 1002.
     if (response == "1002"):
