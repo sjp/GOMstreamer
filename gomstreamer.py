@@ -50,61 +50,9 @@ VERSION = '0.7.3'
 def main():
     curlCmd = 'curl -A KPeerClient "$url" -o "$output"'
     wgetCmd = 'wget -U KPeerClient --tries 1 "$url" -O "$output"'
-
-    # Application locations and parameters for different operating systems.
-    if os.name == 'posix' and os.uname()[0] == 'Darwin':
-        # OSX
-        vlcPath = '/Applications/VLC.app/Contents/MacOS/VLC'
-        webCmdDefault = curlCmd
-    elif os.name == 'posix':
-        # Linux
-        vlcPath = 'vlc'
-        webCmdDefault = wgetCmd
-    elif os.name == 'nt':
-        def find_vlc():
-            vlc_subpath = r'VideoLAN\VLC\vlc.exe'
-            prog_files = os.environ.get('ProgramFiles')
-            prog_files86 = os.environ.get('ProgramFiles(x86)')
-            # 32bit Python on x64 Windows would see both as mapping to the x86
-            # folder, but that's OK since there's no official 64bit vlc for
-            # Windows yet.
-            vlc_path = os_path.join(prog_files, vlc_subpath) if prog_files else None
-            if vlc_path and os_path.exists(vlc_path):
-                return vlc_path
-            vlc_path = os_path.join(prog_files86, vlc_subpath) if prog_files86 else None
-            if vlc_path and os_path.exists(vlc_path):
-                return vlc_path
-            return 'vlc' # maybe it's in PATH
-
-        vlcPath = '"' + find_vlc() + '"'
-        webCmdDefault = curlCmd
-    else:
-        logging.error('Unrecognized OS')
-        sys.exit(1)
+    vlcPath, webCmdDefault = getDefaultLocations(curlCmd, wgetCmd)
     vlcCmdDefault = vlcPath + ' --file-caching $cache $debug - vlc://quit'
-
-    # Collecting options parsed in from the command line
-    parser = OptionParser()
-    parser.add_option('-p', '--password', dest = 'password', help = 'Password to your GOMtv account')
-    parser.add_option('-e', '--email', dest = 'email', help = 'Email your GOMtv account uses')
-    parser.add_option('-m', '--mode', dest = 'mode',
-                      help = 'Mode of use: "play", "save" or "delayed-save". Default is "play". This parameter is case sensitive.',
-                      choices=['play', 'save', 'delayed-save'])
-    parser.add_option('-q', '--quality', dest = 'quality', help = 'Stream quality to use: "HQ", "SQ" or "SQTest". Default is "SQTest". This parameter is case sensitive.')
-    parser.add_option('-o', '--output', dest = 'outputFile', help = 'File to save stream to (Default = "dump.ogm")')
-    parser.add_option('-t', '--time', dest = 'kt', help = 'If the "delayed-save" mode is used, this option holds the value of the *Korean* time to record at in HH:MM format. (Default = "18:00")')
-    parser.add_option('-v', '--vlccmd', '-c', '--command', dest = 'vlcCmd', help = 'Custom command for playing stream from stdout')
-    parser.add_option('-w', '--webcmd', dest = 'webCmd', help = 'Custom command for producing stream on stdout')
-    parser.add_option('-d', '--buffer-time', dest = 'cache', help = 'VLC cache size in [ms]')
-
-    parser.set_defaults(vlcCmd = vlcCmdDefault)
-    parser.set_defaults(webCmd = webCmdDefault)
-    parser.set_defaults(quality = 'SQTest')  # Setting default stream quality to 'SQTest'
-    parser.set_defaults(outputFile = 'dump.ogm')  # Save to dump.ogm by default
-    parser.set_defaults(mode = 'play')  # Want to play the stream by default
-    parser.set_defaults(kt = '18:00')  # If we are scheduling a recording, do it at 18:00 KST by default
-    parser.set_defaults(cache = 30000)  # Caching 30s by default
-    options, args = parser.parse_args()
+    options, args = parseOptions(vlcCmdDefault, webCmdDefault)
 
     # Printing out parameters
     logging.debug('Email: %s', options.email)
@@ -114,14 +62,6 @@ def main():
     logging.debug('Output: %s', options.outputFile)
     logging.debug('VlcCmd: %s', options.vlcCmd)
     logging.debug('WebCmd: %s', options.webCmd)
-
-    # additional sanity checks
-    if len(args):
-        parser.error('Extra arguments specified: ' + repr(args))
-    if not options.email:
-        parser.error('--email must be specified')
-    if not options.password:
-        parser.error('--password must be specified')
 
     # Stopping if email and password are defaults found in *.sh/command/cmd
     if options.email == 'youremail@example.com' and options.password == 'PASSWORD':
@@ -137,71 +77,35 @@ def main():
         # Delaying execution until necessary
         delay(options.kt)
 
-    gomtvURL = 'http://www.gomtv.net'
-    gomtvSignInURL = 'https://ssl.gomtv.net/userinfo/loginProcess.gom'
-    values = {
-             'cmd': 'login',
-             'rememberme': '1',
-             'mb_username': options.email,
-             'mb_password': options.password
-             }
-    # Now expects to log in only via the website. Thanks chrippa.
-    headers = {'Referer': 'http://www.gomtv.net/'}
-
-    data = urllib.urlencode(values)
+    # Setting urllib2 up so that we can store cookies
     cookiejar = cookielib.LWPCookieJar()
     opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(cookiejar))
+    urllib2.install_opener(opener)
 
     # Signing into GOMTV
     print 'Signing in.'
-    request = urllib2.Request(gomtvSignInURL, data, headers)
-    urllib2.install_opener(opener)
-    response = urllib2.urlopen(request)
-
+    signIn('https://ssl.gomtv.net/userinfo/loginProcess.gom', options)
     if len(cookiejar) == 0:
         logging.error('Authentification failed. Please check your login and password.')
         sys.exit(1)
 
     # Collecting data on the Live streaming page
     print 'Getting season url...'
-    gomtvLiveURL = getLivePageURL(gomtvURL)
+    gomtvLiveURL = getLivePageURL('http://www.gomtv.net')
     print 'Grabbing the \'Live\' page (%s).' % gomtvLiveURL
-    request = urllib2.Request(gomtvLiveURL)
-    response = urllib2.urlopen(request)
-    response = response.read()
-
-    # If a special event occurs, we know that the live page response
-    # will just be some JavaScript that redirects the browser to the
-    # real live page. We assume that the entireity of this JavaScript
-    # is less than 200 characters long, and that real live pages are
-    # more than that.
-    if len(response) < 200:
-        # Grabbing the real live page URL
-        gomtvLiveURL = getEventLivePageURL(gomtvLiveURL, response)
-        print "Redirecting to the Event\'s 'Live' page (%s)." % gomtvLiveURL
-        request = urllib2.Request(gomtvLiveURL)
-        response = urllib2.urlopen(request)
-        response = response.read()
-        # Most events are free and have both HQ and SQ streams, but
-        # not SQTest. As a result, assume we really want SQ after asking
-        # for SQTest, makes it more seamless between events and GSL.
-        if options.quality == "SQTest":
-            options.quality = "SQ"
+    response, options = grabLivePage(gomtvLiveURL, options)
 
     print 'Parsing the "Live" page for the GOX XML link.'
     url = parseHTML(response, options.quality)
-
     logging.debug('Printing URL on Live page: %s', url)
 
     # Grab the response of the URL listed on the Live page for a stream
     print 'Grabbing the GOX XML file.'
-    request = urllib2.Request(url)
-    response = urllib2.urlopen(request)
-    responseData = response.read()
+    goxFile = grabPage(url)
 
     # Find out the URL found in the response
     print 'Parsing the GOX XML file for the stream URL.'
-    url = parseStreamURL(responseData, options.quality)
+    url = parseStreamURL(goxFile, options.quality)
 
     # Put variables into VLC command
     vlcCmd = Template(options.vlcCmd).substitute(
@@ -241,6 +145,110 @@ def main():
     except KeyboardInterrupt:
         # Swallow it, we are terminating anyway and don't want a stack trace.
         pass
+
+def signIn(gomtvSignInURL, options):
+    values = {
+             'cmd': 'login',
+             'rememberme': '1',
+             'mb_username': options.email,
+             'mb_password': options.password
+             }
+    data = urllib.urlencode(values)
+    # Now expects to log in only via the website. Thanks chrippa.
+    headers = {'Referer': 'http://www.gomtv.net/'}
+    request = urllib2.Request(gomtvSignInURL, data, headers)
+    response = urllib2.urlopen(request)
+    # The real response that we want are the cookies, so returning None is fine.
+    return
+
+def grabLivePage(gomtvLiveURL, options):
+    response = grabPage(gomtvLiveURL)
+    # If a special event occurs, we know that the live page response
+    # will just be some JavaScript that redirects the browser to the
+    # real live page. We assume that the entireity of this JavaScript
+    # is less than 200 characters long, and that real live pages are
+    # more than that.
+    if len(response) < 200:
+        # Grabbing the real live page URL
+        gomtvLiveURL = getEventLivePageURL(gomtvLiveURL, response)
+        print "Redirecting to the Event\'s 'Live' page (%s)." % gomtvLiveURL
+        response = grabPage(gomtvLiveURL)
+        # Most events are free and have both HQ and SQ streams, but
+        # not SQTest. As a result, assume we really want SQ after asking
+        # for SQTest, makes it more seamless between events and GSL.
+        if options.quality == "SQTest":
+            options.quality = "SQ"
+    return response, options
+
+def grabPage(url):
+    request = urllib2.Request(url)
+    response = urllib2.urlopen(request)
+    return response.read()
+
+def parseOptions(vlcCmdDefault, webCmdDefault):
+    # Collecting options parsed in from the command line
+    parser = OptionParser()
+    parser.add_option('-p', '--password', dest = 'password', help = 'Password to your GOMtv account')
+    parser.add_option('-e', '--email', dest = 'email', help = 'Email your GOMtv account uses')
+    parser.add_option('-m', '--mode', dest = 'mode',
+                      help = 'Mode of use: "play", "save" or "delayed-save". Default is "play". This parameter is case sensitive.',
+                      choices=['play', 'save', 'delayed-save'])
+    parser.add_option('-q', '--quality', dest = 'quality', help = 'Stream quality to use: "HQ", "SQ" or "SQTest". Default is "SQTest". This parameter is case sensitive.')
+    parser.add_option('-o', '--output', dest = 'outputFile', help = 'File to save stream to (Default = "dump.ogm")')
+    parser.add_option('-t', '--time', dest = 'kt', help = 'If the "delayed-save" mode is used, this option holds the value of the *Korean* time to record at in HH:MM format. (Default = "18:00")')
+    parser.add_option('-v', '--vlccmd', '-c', '--command', dest = 'vlcCmd', help = 'Custom command for playing stream from stdout')
+    parser.add_option('-w', '--webcmd', dest = 'webCmd', help = 'Custom command for producing stream on stdout')
+    parser.add_option('-d', '--buffer-time', dest = 'cache', help = 'VLC cache size in [ms]')
+
+    parser.set_defaults(vlcCmd = vlcCmdDefault)
+    parser.set_defaults(webCmd = webCmdDefault)
+    parser.set_defaults(quality = 'SQTest')  # Setting default stream quality to 'SQTest'
+    parser.set_defaults(outputFile = 'dump.ogm')  # Save to dump.ogm by default
+    parser.set_defaults(mode = 'play')  # Want to play the stream by default
+    parser.set_defaults(kt = '18:00')  # If we are scheduling a recording, do it at 18:00 KST by default
+    parser.set_defaults(cache = 30000)  # Caching 30s by default
+    options, args = parser.parse_args()
+    # additional sanity checks
+    if len(args):
+        parser.error('Extra arguments specified: ' + repr(args))
+    if not options.email:
+        parser.error('--email must be specified')
+    if not options.password:
+        parser.error('--password must be specified')
+    return options, args
+
+def getDefaultLocations(curlCmd, wgetCmd):
+    # Application locations and parameters for different operating systems.
+    if os.name == 'posix' and os.uname()[0] == 'Darwin':
+        # OSX
+        vlcPath = '/Applications/VLC.app/Contents/MacOS/VLC'
+        webCmdDefault = curlCmd
+    elif os.name == 'posix':
+        # Linux
+        vlcPath = 'vlc'
+        webCmdDefault = wgetCmd
+    elif os.name == 'nt':
+        def find_vlc():
+            vlc_subpath = r'VideoLAN\VLC\vlc.exe'
+            prog_files = os.environ.get('ProgramFiles')
+            prog_files86 = os.environ.get('ProgramFiles(x86)')
+            # 32bit Python on x64 Windows would see both as mapping to the x86
+            # folder, but that's OK since there's no official 64bit vlc for
+            # Windows yet.
+            vlc_path = os_path.join(prog_files, vlc_subpath) if prog_files else None
+            if vlc_path and os_path.exists(vlc_path):
+                return vlc_path
+            vlc_path = os_path.join(prog_files86, vlc_subpath) if prog_files86 else None
+            if vlc_path and os_path.exists(vlc_path):
+                return vlc_path
+            return 'vlc' # maybe it's in PATH
+
+        vlcPath = '"' + find_vlc() + '"'
+        webCmdDefault = curlCmd
+    else:
+        print 'Unrecognized OS'
+        sys.exit(1)
+    return vlcPath, webCmdDefault
 
 def checkForUpdate():
     print 'Checking for update...',
