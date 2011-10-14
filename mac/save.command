@@ -5,4 +5,4 @@ PASSWORD='PASSWORD'
 QUALITY='SQTest'
 MODE='save'
 DUMPFILE='dump.ogm'
-python ./gomstreamer.py -e $EMAIL -p $PASSWORD -q $QUALITY -m $MODE -o $DUMPFILE
+python ../gomstreamer.py -e $EMAIL -p $PASSWORD -q $QUALITY -m $MODE -o $DUMPFILE

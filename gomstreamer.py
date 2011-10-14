@@ -73,7 +73,7 @@ def main():
     # Seeing if we're running the latest version of GOMstreamer
     checkForUpdate()
 
-    if options.mode == 'delayed-save':
+    if options.mode == 'scheduled-save':
         # Delaying execution until necessary
         delay(options.kt)
 
@@ -191,11 +191,11 @@ def parseOptions(vlcCmdDefault, webCmdDefault):
     parser.add_option('-p', '--password', dest = 'password', help = 'Password to your GOMtv account')
     parser.add_option('-e', '--email', dest = 'email', help = 'Email your GOMtv account uses')
     parser.add_option('-m', '--mode', dest = 'mode',
-                      help = 'Mode of use: "play", "save" or "delayed-save". Default is "play". This parameter is case sensitive.',
-                      choices=['play', 'save', 'delayed-save'])
+                      help = 'Mode of use: "play", "save" or "scheduled-save". Default is "play". This parameter is case sensitive.',
+                      choices=['play', 'save', 'scheduled-save'])
     parser.add_option('-q', '--quality', dest = 'quality', help = 'Stream quality to use: "HQ", "SQ" or "SQTest". Default is "SQTest". This parameter is case sensitive.')
     parser.add_option('-o', '--output', dest = 'outputFile', help = 'File to save stream to (Default = "dump.ogm")')
-    parser.add_option('-t', '--time', dest = 'kt', help = 'If the "delayed-save" mode is used, this option holds the value of the *Korean* time to record at in HH:MM format. (Default = "18:00")')
+    parser.add_option('-t', '--time', dest = 'kt', help = 'If the "scheduled-save" mode is used, this option holds the value of the *Korean* time to record at in HH:MM format. (Default = "18:00")')
     parser.add_option('-v', '--vlccmd', '-c', '--command', dest = 'vlcCmd', help = 'Custom command for playing stream from stdout')
     parser.add_option('-w', '--webcmd', dest = 'webCmd', help = 'Custom command for producing stream on stdout')
     parser.add_option('-d', '--buffer-time', dest = 'cache', help = 'VLC cache size in [ms]')
