@@ -307,7 +307,12 @@ def delay(kt):
     print 'Waiting until', kt, 'KST.'
     print 'This will occur after waiting ' + nice_record_delta + '.'
     print ''
-    time.sleep(record_delta)  # Delaying further execution until target Korean time
+    try:
+        time.sleep(record_delta)  # Delaying further execution until target Korean time
+    except KeyboardInterrupt:
+        print ''
+        print 'Scheduling has been cancelled.'
+        sys.exit(0)
 
 def getLivePageURL(gomtvURL, method = 'url'):
     if method == 'url':
