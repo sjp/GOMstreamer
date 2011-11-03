@@ -359,7 +359,6 @@ def parseHTML(response, quality):
         patternHTML = r'http://www.gomtv.net/gox[^;]+;'
         urlFromHTML = re.search(patternHTML, response).group(0)
         urlFromHTML = re.sub(r'\" \+ playType \+ \"', quality, urlFromHTML)
-        urlFromHTML = re.sub(r'\"[^;]+;', '', urlFromHTML)
     except AttributeError:
         logging.error('Unable to find the majority of the GOMtv XML URL on the Live page.')
         sys.exit(0)
@@ -371,11 +370,12 @@ def parseHTML(response, quality):
         titleFromHTML = re.search(patternTitle, response).group(0)
         titleFromHTML = re.search(r'\"(.*)\"', titleFromHTML).group(0)
         titleFromHTML = re.sub(r'\"', '', titleFromHTML)
+        urlFromHTML = re.sub(r'\" \+ tmpThis.title \+ \"', titleFromHTML, urlFromHTML)
     except AttributeError:
         logging.error('Unable to find the stream title on the Live page.')
         sys.exit(0)
 
-    return (urlFromHTML + titleFromHTML)
+    return urlFromHTML
 
 def parseStreamURL(response, quality):
     # Observing the GOX XML file containing the stream link
