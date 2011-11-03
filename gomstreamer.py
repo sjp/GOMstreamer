@@ -45,7 +45,7 @@ else:
     logging.basicConfig(level = logging.ERROR,
                         format='%(levelname)s %(message)s')
 
-VERSION = '0.7.3'
+VERSION = '0.8.0'
 
 def main():
     curlCmd = 'curl -A KPeerClient "$url" -o "$output"'
@@ -369,8 +369,8 @@ def parseHTML(response, quality):
         patternTitle = r'this\.title[^;]+;'
         titleFromHTML = re.search(patternTitle, response).group(0)
         titleFromHTML = re.search(r'\"(.*)\"', titleFromHTML).group(0)
-        titleFromHTML = re.sub(r'\"', '', titleFromHTML)
-        urlFromHTML = re.sub(r'\" \+ tmpThis.title \+ \"', titleFromHTML, urlFromHTML)
+        titleFromHTML = re.sub(r'"', '', titleFromHTML)
+        urlFromHTML = re.sub(r'"\+tmpThis.title\+"', titleFromHTML, urlFromHTML)
     except AttributeError:
         logging.error('Unable to find the stream title on the Live page.')
         sys.exit(0)
@@ -392,7 +392,7 @@ def parseStreamURL(response, quality):
         streamPattern = r'<REF href="([^"]*)"/>'
         regexResult = re.search(streamPattern, response).group(1)
     except AttributeError:
-        logging.error('Error: Unable to find the gomcmd URL in the GOX XML file.')
+        logging.error('Unable to find the gomcmd URL in the GOX XML file.')
         sys.exit(0)
 
     print 'Stream found, cleaning up URL.'
