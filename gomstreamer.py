@@ -356,8 +356,8 @@ def parseHTML(response, quality):
     # Parsing through the live page for a link to the gox XML file.
     # Quality is simply passed as a URL parameter e.g. HQ, SQ, SQTest
     try:
-        patternHTML = r'http://www.gomtv.net/gox[^;]+;'
-        urlFromHTML = re.search(patternHTML, response).group(0)
+        patternHTML = r'[^/]+var.+(http://www.gomtv.net/gox[^;]+;)'
+        urlFromHTML = re.search(patternHTML, response).group(1)
         urlFromHTML = re.sub(r'\" \+ playType \+ \"', quality, urlFromHTML)
     except AttributeError:
         logging.error('Unable to find the majority of the GOMtv XML URL on the Live page.')
@@ -370,7 +370,7 @@ def parseHTML(response, quality):
         titleFromHTML = re.search(patternTitle, response).group(0)
         titleFromHTML = re.search(r'\"(.*)\"', titleFromHTML).group(0)
         titleFromHTML = re.sub(r'"', '', titleFromHTML)
-        urlFromHTML = re.sub(r'"\+tmpThis.title\+"', titleFromHTML, urlFromHTML)
+        urlFromHTML = re.sub(r'"\+ tmpThis.title;', titleFromHTML, urlFromHTML)
     except AttributeError:
         logging.error('Unable to find the stream title on the Live page.')
         sys.exit(0)
