@@ -378,9 +378,9 @@ def parseHTML(response, quality):
     # Check for multiple streams going at the same time, and extract the conid and the title
     # Those streams have the class "live_now"
     patternLive = r'<a\shref=\"/live/index.gom\?conid=(?P<conid>\d+)\"\sclass=\"live_now\"\stitle=\"(?P<title>[^\"]+)'
-    live_streams= re.findall(patternLive, response)
+    live_streams = re.findall(patternLive, response)
 
-    if live_streams > 1:
+    if len(live_streams) > 1:
         stream = -1
         options = range(len(live_streams))
         while(stream not in options):
