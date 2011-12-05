@@ -375,6 +375,28 @@ def parseHTML(response, quality):
         logging.error('Unable to find the stream title on the Live page.')
         sys.exit(0)
 
+    # Check for multiple streams going at the same time, and extract the conid and the title
+    # Those streams have the class "live_now"
+    patternLive = r'<a\shref=\"/live/index.gom\?conid=(?P<conid>\d+)\"\sclass=\"live_now\"\stitle=\"(?P<title>[^\"]+)'
+    live_streams = re.findall(patternLive, response)
+
+    if len(live_streams) > 1:
+        stream = -1
+        options = range(len(live_streams))
+        while(stream not in options):
+            print "More than one stream live, select one of them:"
+            for i in options:
+                print "[%d] conid: %s - title: %s" % (i, live_streams[i][0], live_streams[i][1])
+            try:
+                stream = int(raw_input("option: "))
+            except ValueError:
+                pass 
+
+        # Modify the urlFromHTML according to the user
+        urlFromHTML = re.sub(r'conid=\d+', 'conid=' + live_streams[stream][0], urlFromHTML)
+        titleHTML = '+'.join(live_streams[stream][1].split(' '))
+        urlFromHTML = re.sub(r'title=[\w|.|+]*', 'title=' + titleHTML, urlFromHTML)
+
     return urlFromHTML
 
 def parseStreamURL(response, quality):
