@@ -411,7 +411,7 @@ def parseStreamURL(response, quality):
     # Grabbing the gomcmd URL
     try:
         print 'Parsing for the HTTP stream.'
-        streamPattern = r'<REF href="([^"]*)"/>'
+        streamPattern = r'<REF href="([^"]*)"\s*/>'
         regexResult = re.search(streamPattern, response).group(1)
     except AttributeError:
         logging.error('Unable to find the gomcmd URL in the GOX XML file.')
