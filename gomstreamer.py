@@ -95,17 +95,29 @@ def main():
     print 'Grabbing the \'Live\' page (%s).' % gomtvLiveURL
     response, options = grabLivePage(gomtvLiveURL, options)
 
-    print 'Parsing the "Live" page for the GOX XML link.'
-    url = parseHTML(response, options.quality)
-    logging.debug('Printing URL on Live page: %s', url)
+    print 'Parsing the \'Live\' page for the GOX XML link.'
+    validGoxFound = False
+    while (not validGoxFound):
+        url = parseHTML(response, options.quality)
+        logging.debug('Printing URL on Live page: %s', url)
+    
+        # Grab the response of the URL listed on the Live page for a stream
+        print 'Grabbing the GOX XML file for the %s stream.' % options.quality
+        goxFile = grabPage(url)
 
-    # Grab the response of the URL listed on the Live page for a stream
-    print 'Grabbing the GOX XML file.'
-    goxFile = grabPage(url)
+        # The response for the GOX XML if an incorrect stream quality is chosen is 1002.
+        if (goxFile == '1002' or goxFile == ''):
+            newQuality = 'SQ' if options.quality == 'HQ' else 'SQTest'
+            logging.error('Unable to use %s quality stream.', options.quality)
+            logging.error('Purchase a premium ticket for access to this stream quality.')
+            logging.error('Trying %s quality instead.', newQuality)
+            options.quality = newQuality
+        else:
+            validGoxFound = True
 
     # Find out the URL found in the response
     print 'Parsing the GOX XML file for the stream URL.'
-    url = parseStreamURL(goxFile, options.quality)
+    url = parseStreamURL(goxFile)
 
     # Put variables into VLC command
     vlcCmd = Template(options.vlcCmd).substitute(
@@ -171,13 +183,13 @@ def grabLivePage(gomtvLiveURL, options):
     if len(response) < 200:
         # Grabbing the real live page URL
         gomtvLiveURL = getEventLivePageURL(gomtvLiveURL, response)
-        print "Redirecting to the Event\'s 'Live' page (%s)." % gomtvLiveURL
+        print 'Redirecting to the Event\'s \'Live\' page (%s).' % gomtvLiveURL
         response = grabPage(gomtvLiveURL)
         # Most events are free and have both HQ and SQ streams, but
         # not SQTest. As a result, assume we really want SQ after asking
         # for SQTest, makes it more seamless between events and GSL.
-        if options.quality == "SQTest":
-            options.quality = "SQ"
+        if options.quality == 'SQTest':
+            options.quality = 'SQ'
     return response, options
 
 def grabPage(url):
@@ -384,11 +396,11 @@ def parseHTML(response, quality):
         stream = -1
         options = range(len(live_streams))
         while(stream not in options):
-            print "More than one stream live, select one of them:"
+            print 'More than one stream live, select one of them:'
             for i in options:
-                print "[%d] conid: %s - title: %s" % (i, live_streams[i][0], live_streams[i][1])
+                print '[%d] conid: %s - title: %s' % (i, live_streams[i][0], live_streams[i][1])
             try:
-                stream = int(raw_input("option: "))
+                stream = int(raw_input('option: '))
             except ValueError:
                 pass 
 
@@ -399,14 +411,9 @@ def parseHTML(response, quality):
 
     return urlFromHTML
 
-def parseStreamURL(response, quality):
+def parseStreamURL(response):
     # Observing the GOX XML file containing the stream link
     logging.debug('GOX XML: %s', response)
-
-    # The response for the GOX XML if an incorrect stream quality is chosen is 1002.
-    if (response == '1002'):
-        logging.error('A premium ticket is required to watch higher quality streams, please choose "SQTest" instead.')
-        sys.exit(0)
 
     # Grabbing the gomcmd URL
     try:
