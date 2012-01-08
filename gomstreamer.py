@@ -43,7 +43,7 @@ if debug:
     logging.basicConfig(level = logging.DEBUG,
                         format='%(levelname)s %(message)s')
 else:
-    logging.basicConfig(level = logging.ERROR,
+    logging.basicConfig(level = logging.WARNING,
                         format='%(levelname)s %(message)s')
 
 VERSION = '0.8.0'
@@ -84,24 +84,24 @@ def main():
     urllib2.install_opener(opener)
 
     # Signing into GOMTV
-    print 'Signing in.'
+    logging.info('Signing in.')
     signIn('https://ssl.gomtv.net/userinfo/loginProcess.gom', options)
     if len(cookiejar) == 0:
         logging.error('Authentification failed. Please check your login and password.')
         sys.exit(1)
 
     # Collecting data on the Live streaming page
-    print 'Getting season url...'
+    logging.info('Getting season url...')
     gomtvLiveURL = getLivePageURL('http://www.gomtv.net')
-    print 'Grabbing the \'Live\' page (%s).' % gomtvLiveURL
+    logging.info('Grabbing the \'Live\' page (%s).' % gomtvLiveURL)
     response, options = grabLivePage(gomtvLiveURL, options)
 
-    print 'Parsing the \'Live\' page for the GOX XML link.'
+    logging.info('Parsing the \'Live\' page for the GOX XML link.')
     goxFiles = []
     validGoxFound = False
     while (not validGoxFound):
         urls = parseHTML(response, options.quality)
-        logging.debug('Printing URL(s) on Live page: %s', urls)
+        logging.debug('Printing URL(s) on Live page: %s' % urls)
     
         if len(urls) > 1:
             if options.streamChoice == 'first':
@@ -113,15 +113,15 @@ def main():
             url = urls[i]
 
             # Grab the response of the URL listed on the Live page for a stream
-            print 'Grabbing the GOX XML file for the %s stream.' % options.quality
+            logging.info('Grabbing the GOX XML file for the %s stream.' % options.quality)
             goxFile = grabPage(url)
     
             # The response for the GOX XML if an incorrect stream quality is chosen is 1002.
             if (goxFile == '1002' or goxFile == ''):
                 newQuality = 'SQ' if options.quality == 'HQ' else 'SQTest'
-                logging.error('Unable to use %s quality stream.', options.quality)
-                logging.error('Purchase a premium ticket for access to this stream quality.')
-                logging.error('Trying %s quality instead.', newQuality)
+                logging.warning('Unable to use %s quality stream.', options.quality)
+                logging.warning('Purchase a premium ticket for access to this stream quality.')
+                logging.warning('Trying %s quality instead.', newQuality)
                 options.quality = newQuality
                 break
             else:
@@ -129,7 +129,7 @@ def main():
                 validGoxFound = True
 
     # Find out the URL found in the response
-    print 'Parsing the GOX XML file(s) for the stream URL(s).'
+    logging.info('Parsing the GOX XML file(s) for the stream URL(s).')
     numberOfStreams = len(goxFiles)
     urls = []
     for i in range(numberOfStreams):
@@ -174,16 +174,12 @@ def main():
         else:
             cmds.append(webCmd)
 
-    print ''
     if numberOfStreams > 1:
-        print 'Stream URLs:', urls
-        print ''
-        print 'Commands:', cmds
+        logging.info('Stream URLs: %s' % urls)
+        logging.info('Commands: %s' % cmds)
     else:
-        print 'Stream URL', urls[0]
-        print ''
-        print 'Command:', cmds[0]
-    print ''
+        logging.info('Stream URL: %s' % urls[0])
+        logging.info('Command: %s' % cmds[0])
 
     if options.mode == 'play':
         if numberOfStreams > 1:
@@ -232,7 +228,7 @@ def grabLivePage(gomtvLiveURL, options):
     if len(response) < 200:
         # Grabbing the real live page URL
         gomtvLiveURL = getEventLivePageURL(gomtvLiveURL, response)
-        print 'Redirecting to the Event\'s \'Live\' page (%s).' % gomtvLiveURL
+        logging.info('Redirecting to the Event\'s \'Live\' page (%s).' % gomtvLiveURL)
         response = grabPage(gomtvLiveURL)
         # Most events are free and have both HQ and SQ streams, but
         # not SQTest. As a result, assume we really want SQ after asking
@@ -310,12 +306,12 @@ def getDefaultLocations(curlCmd, wgetCmd):
         vlcPath = '"' + find_vlc() + '"'
         webCmdDefault = curlCmd
     else:
-        print 'Unrecognized OS'
+        logging.error('Unrecognized OS')
         sys.exit(1)
     return vlcPath, webCmdDefault
 
 def checkForUpdate():
-    print 'Checking for update...',
+    logging.info('Checking for update...')
     try:
         # Grabbing txt file containing version string of latest version
         updateURL = 'http://sjp.co.nz/projects/gomstreamer/version.txt'
@@ -324,17 +320,15 @@ def checkForUpdate():
         latestVersion = response.read().strip()
 
         if VERSION < latestVersion:
-            print ''
-            print '================================================================================'
-            print ''
-            print ' NOTE: Your version of GOMstreamer is ' + VERSION + '.'
-            print '       The latest version is ' + latestVersion + '.'
-            print '       Download the latest version from http://sjp.co.nz/projects/gomstreamer/'
-            print ''
-            print '================================================================================'
-            print ''
+            logging.warning('========================================================================')
+            logging.warning('')
+            logging.warning('Your version of GOMstreamer is ' + VERSION + '.')
+            logging.warning('The latest version is ' + latestVersion + '.')
+            logging.warning('Download the latest version from http://sjp.co.nz/projects/gomstreamer/')
+            logging.warning('')
+            logging.warning('========================================================================')
         else:
-            print 'have the latest version'
+            logging.info('You are using the latest version.')
     except Exception as exc:
         logging.error('Failed to check version: %s', exc)
 
@@ -385,8 +379,8 @@ def getLivePageURL(gomtvURL, method = 'url'):
         try:
             seasonURL = getSeasonURL_gom(gomtvURL)
         except Exception as exc:
-            print 'Failed to get season url from gomtv.net: ', exc
-            print 'Getting season url from sjp.co.nz...'
+            logging.error('Failed to get season url from gomtv.net: ', exc)
+            logging.info('Getting season url from sjp.co.nz...')
             seasonURL = getSeasonURL_sjp()
     else:
         seasonURL = getSeasonURL_sjp()
@@ -463,22 +457,22 @@ def parseStreamURL(response):
 
     # Grabbing the gomcmd URL
     try:
-        print 'Parsing for the HTTP stream.'
+        logging.info('Parsing for the HTTP stream.')
         streamPattern = r'<REF href="([^"]*)"\s*/>'
         regexResult = re.search(streamPattern, response).group(1)
     except AttributeError:
         logging.error('Unable to find the gomcmd URL in the GOX XML file.')
         sys.exit(0)
 
-    print 'Stream found, cleaning up URL.'
+    logging.info('Stream found, cleaning up URL.')
     regexResult = urllib.unquote(regexResult)
     regexResult = re.sub(r'&amp;', '&', regexResult)
     # SQ and SQTest streams can be gomp2p links, with actual stream address passed as a parameter.
     if regexResult.startswith('gomp2p://'):
-        print 'Extracting stream URL from gomp2p link.'
+        logging.info('Extracting stream URL from gomp2p link.')
         regexResult, n = re.subn(r'^.*LiveAddr=', '', regexResult)
         if not n:
-            logging.warning('failed to extract stream URL from %r', regexResult)
+            logging.warning('Failed to extract stream URL from %r', regexResult)
     # Cosmetics, getting rid of the HTML entity, we don't
     # need either of the " character or &quot;
     regexResult = regexResult.replace('&quot;', '')
