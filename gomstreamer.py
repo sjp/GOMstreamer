@@ -25,6 +25,7 @@ import logging
 import os
 import re
 import StringIO
+from subprocess import call
 import sys
 import time
 import urllib
@@ -96,66 +97,114 @@ def main():
     response, options = grabLivePage(gomtvLiveURL, options)
 
     print 'Parsing the \'Live\' page for the GOX XML link.'
+    goxFiles = []
     validGoxFound = False
     while (not validGoxFound):
-        url = parseHTML(response, options.quality)
-        logging.debug('Printing URL on Live page: %s', url)
+        urls = parseHTML(response, options.quality)
+        logging.debug('Printing URL(s) on Live page: %s', urls)
     
-        # Grab the response of the URL listed on the Live page for a stream
-        print 'Grabbing the GOX XML file for the %s stream.' % options.quality
-        goxFile = grabPage(url)
+        if len(urls) > 1:
+            if options.streamChoice == 'first':
+                urls = urls[:1]
+            if options.options.streamChoice == 'alternate':
+                urls = urls[1:2] # Assume second is alternate
 
-        # The response for the GOX XML if an incorrect stream quality is chosen is 1002.
-        if (goxFile == '1002' or goxFile == ''):
-            newQuality = 'SQ' if options.quality == 'HQ' else 'SQTest'
-            logging.error('Unable to use %s quality stream.', options.quality)
-            logging.error('Purchase a premium ticket for access to this stream quality.')
-            logging.error('Trying %s quality instead.', newQuality)
-            options.quality = newQuality
-        else:
-            validGoxFound = True
+        for i in range(len(urls)):
+            url = urls[i]
+
+            # Grab the response of the URL listed on the Live page for a stream
+            print 'Grabbing the GOX XML file for the %s stream.' % options.quality
+            goxFile = grabPage(url)
+    
+            # The response for the GOX XML if an incorrect stream quality is chosen is 1002.
+            if (goxFile == '1002' or goxFile == ''):
+                newQuality = 'SQ' if options.quality == 'HQ' else 'SQTest'
+                logging.error('Unable to use %s quality stream.', options.quality)
+                logging.error('Purchase a premium ticket for access to this stream quality.')
+                logging.error('Trying %s quality instead.', newQuality)
+                options.quality = newQuality
+                break
+            else:
+                goxFiles.append(goxFile)
+                validGoxFound = True
 
     # Find out the URL found in the response
-    print 'Parsing the GOX XML file for the stream URL.'
-    url = parseStreamURL(goxFile)
+    print 'Parsing the GOX XML file(s) for the stream URL(s).'
+    numberOfStreams = len(goxFiles)
+    urls = []
+    for i in range(numberOfStreams):
+        urls.append(parseStreamURL(goxFiles[i]))
 
     # Put variables into VLC command
     vlcCmd = Template(options.vlcCmd).substitute(
             {'cache': options.cache, 
              'debug' : ('', '--verbose=2')[debug]})
 
-    # Put variables into wget/curl command
-    outputFile = '-' if options.mode == 'play' else options.outputFile
-    webCmd = Template(options.webCmd).substitute(
-            {'url' : url, 'output' : outputFile})
+    # In order to ensure we don't save over the top of the same stream
+    # when two streams are present, prepend 'alternate-' to the filename
+    # of the second stream.
+    outputFiles = []
+    for i in range(numberOfStreams):
+        '-' if options.mode == 'play' else options.outputFile
+        if (options.mode == 'play'):
+            outputFiles.append('-')
+        else:
+            if len(urls) > 1:
+                outputFiles.append("alternate-" + options.outputFile)
+            else:
+                outputFiles.append(options.outputFile)
 
-    # Add verbose output for VLC if we are debugging
-    if debug:
-        webCmd = webCmd + ' -v'
+    # Create shell commands
+    cmds = []
+    for i in range(numberOfStreams):
+        url = urls[i]
+        outputFile = outputFiles[i]
 
-    # If playing pipe wget/curl into VLC, else save stream to file
-    # We have already substituted $output with correct target.
-    if options.mode == 'play':
-        cmd = webCmd + ' | ' + vlcCmd
+        webCmd = Template(options.webCmd).substitute(
+                {'url' : url, 'output' : outputFile})
+    
+        # Add verbose output for VLC if we are debugging
+        if debug:
+            webCmd = webCmd + ' -v'
+    
+        # If playing pipe wget/curl into VLC, else save stream to file
+        # We have already substituted $output with correct target.
+        if options.mode == 'play':
+            cmds.append(webCmd + ' | ' + vlcCmd)
+        else:
+            cmds.append(webCmd)
+
+    print ''
+    if numberOfStreams > 1:
+        print 'Stream URLs:', urls
+        print ''
+        print 'Commands:', cmds
     else:
-        cmd = webCmd
-
-    print ''
-    print 'Stream URL:', url
-    print ''
-    print 'Command:', cmd
+        print 'Stream URL', urls[0]
+        print ''
+        print 'Command:', cmds[0]
     print ''
 
     if options.mode == 'play':
-        print 'Playing stream...'
+        if numberOfStreams > 1:
+            print 'Playing streams...'
+        else:
+            print 'Playing stream...'
     else:
-        print 'Saving stream as "' + outputFile + '" ...'
+        if numberOfStreams > 1:
+            print 'Saving streams as ' + outputFiles + ' ...'
+        else:
+            print 'Saving stream as "' + outputFiles[0] + '" ...'
 
     # Executing command
     try:
-        os.system(cmd)
+        for i in range(numberOfStreams):
+            call(cmds[i])
     except KeyboardInterrupt:
         # Swallow it, we are terminating anyway and don't want a stack trace.
+        pass
+    except OSError:
+        # If wget/curl fails to grab the stream, give up
         pass
 
 def signIn(gomtvSignInURL, options):
@@ -206,6 +255,8 @@ def parseOptions(vlcCmdDefault, webCmdDefault):
                       help = 'Mode of use: "play", "save" or "scheduled-save". Default is "play". This parameter is case sensitive.',
                       choices=['play', 'save', 'scheduled-save'])
     parser.add_option('-q', '--quality', dest = 'quality', help = 'Stream quality to use: "HQ", "SQ" or "SQTest". Default is "SQTest". This parameter is case sensitive.')
+    parser.add_option('-s', '--stream', dest = 'streamChoice',
+                      help = 'When more than one stream is available, this determines which stream to use. Possible choices are "first", "alternate" and "both". The default is "first". This parameter is case sensitive.')
     parser.add_option('-o', '--output', dest = 'outputFile', help = 'File to save stream to (Default = "dump.ogm")')
     parser.add_option('-t', '--time', dest = 'kt', help = 'If the "scheduled-save" mode is used, this option holds the value of the *Korean* time to record at in HH:MM format. (Default = "18:00")')
     parser.add_option('-v', '--vlccmd', '-c', '--command', dest = 'vlcCmd', help = 'Custom command for playing stream from stdout')
@@ -216,6 +267,7 @@ def parseOptions(vlcCmdDefault, webCmdDefault):
     parser.set_defaults(webCmd = webCmdDefault)
     parser.set_defaults(quality = 'SQTest')  # Setting default stream quality to 'SQTest'
     parser.set_defaults(outputFile = 'dump.ogm')  # Save to dump.ogm by default
+    parser.set_defaults(streamChoice = 'first')  # Use the first available stream by default
     parser.set_defaults(mode = 'play')  # Want to play the stream by default
     parser.set_defaults(kt = '18:00')  # If we are scheduling a recording, do it at 18:00 KST by default
     parser.set_defaults(cache = 30000)  # Caching 30s by default
@@ -382,7 +434,7 @@ def parseHTML(response, quality):
         titleFromHTML = re.search(patternTitle, response).group(0)
         titleFromHTML = re.search(r'\"(.*)\"', titleFromHTML).group(0)
         titleFromHTML = re.sub(r'"', '', titleFromHTML)
-        urlFromHTML = re.sub(r'"\+ tmpThis.title;', titleFromHTML, urlFromHTML)
+        urlFromHTML = re.sub(r'"\+ tmpThis.title[^;]+;', titleFromHTML, urlFromHTML)
     except AttributeError:
         logging.error('Unable to find the stream title on the Live page.')
         sys.exit(0)
@@ -393,23 +445,17 @@ def parseHTML(response, quality):
     live_streams = re.findall(patternLive, response)
 
     if len(live_streams) > 1:
-        stream = -1
+        liveUrls = []
         options = range(len(live_streams))
-        while(stream not in options):
-            print 'More than one stream live, select one of them:'
-            for i in options:
-                print '[%d] conid: %s - title: %s' % (i, live_streams[i][0], live_streams[i][1])
-            try:
-                stream = int(raw_input('option: '))
-            except ValueError:
-                pass 
-
-        # Modify the urlFromHTML according to the user
-        urlFromHTML = re.sub(r'conid=\d+', 'conid=' + live_streams[stream][0], urlFromHTML)
-        titleHTML = '+'.join(live_streams[stream][1].split(' '))
-        urlFromHTML = re.sub(r'title=[\w|.|+]*', 'title=' + titleHTML, urlFromHTML)
-
-    return urlFromHTML
+        for i in options:
+            # Modify the urlFromHTML according to the user
+            singleUrlFromHTML = re.sub(r'conid=\d+', 'conid=' + live_streams[i][0], urlFromHTML)
+            singleTitleHTML = '+'.join(live_streams[i][1].split(' '))
+            singleUrlFromHTML = re.sub(r'title=[\w|.|+]*', 'title=' + singleTitleHTML, singleUrlFromHTML)
+            liveUrls.append(singleUrlFromHTML)
+        return liveUrls
+    else:
+        return [urlFromHTML]
 
 def parseStreamURL(response):
     # Observing the GOX XML file containing the stream link
