@@ -25,7 +25,7 @@ import logging
 import os
 import re
 import StringIO
-from subprocess import call
+import subprocess
 import sys
 import time
 import urllib
@@ -195,7 +195,7 @@ def main():
     # Executing command
     try:
         for i in range(numberOfStreams):
-            call(cmds[i])
+            subprocess.Popen(cmds[i], shell = True)
     except KeyboardInterrupt:
         # Swallow it, we are terminating anyway and don't want a stack trace.
         pass
