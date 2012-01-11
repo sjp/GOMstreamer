@@ -78,6 +78,122 @@ def main():
         # Delaying execution until necessary
         delay(options.kt)
 
+    # Attempt to grab a list of available streams
+    numberOfStreams, urls = grabStreams(options)
+
+    # Put variables into VLC command
+    vlcCmd = Template(options.vlcCmd).substitute(
+            {'cache': options.cache, 
+             'debug' : ('', '--verbose=2')[debug]})
+
+    # In order to ensure we don't save over the top of the same stream
+    # when two streams are present, prepend 'alternate-' to the filename
+    # of the second stream.
+    outputFiles = []
+    for i in range(numberOfStreams):
+        if (options.mode == 'play'):
+            outputFiles.append('-')
+        elif i == 0:
+            outputFiles.append(options.outputFile)
+        else:
+            outputFiles.append('alternate-' + options.outputFile)
+
+    # Create shell commands
+    cmds = []
+    for i in range(numberOfStreams):
+        url = urls[i]
+        outputFile = outputFiles[i]
+
+        webCmd = Template(options.webCmd).substitute(
+                {'url' : url, 'output' : outputFile})
+    
+        # Add verbose output for VLC if we are debugging
+        if debug:
+            webCmd = webCmd + ' -v'
+    
+        # If playing pipe wget/curl into VLC, else save stream to file
+        # We have already substituted $output with correct target.
+        if options.mode == 'play':
+            cmds.append(webCmd + ' | ' + vlcCmd)
+        else:
+            cmds.append(webCmd)
+
+    if numberOfStreams > 1:
+        logging.info('Stream URLs: %s' % urls)
+        logging.info('Commands: %s' % cmds)
+    else:
+        logging.info('Stream URL: %s' % urls[0])
+        logging.info('Command: %s' % cmds[0])
+
+    if options.mode == 'play':
+        if numberOfStreams > 1:
+            print 'Playing streams...'
+        else:
+            print 'Playing stream...'
+    else:
+        if numberOfStreams > 1:
+            print 'Saving streams as ' + outputFiles + ' ...'
+        else:
+            print 'Saving stream as "' + outputFiles[0] + '" ...'
+
+    # Executing command
+    procs = []
+    try:
+        for i in range(numberOfStreams):
+            procs.append(subprocess.Popen(cmds[i], shell = True))
+    except KeyboardInterrupt:
+        # Swallow it, we are terminating anyway and don't want a stack trace.
+        for i in range(numberOfStreams):
+            procs[i].kill()
+        sys.exit(0)
+    except OSError:
+        # If wget/curl fails to grab the stream, give up
+        for i in range(numberOfStreams):
+            procs[i].kill()
+        sys.exit(0)
+    finally:
+        sys.exit(0)
+
+def signIn(gomtvSignInURL, options):
+    values = {
+             'cmd': 'login',
+             'rememberme': '1',
+             'mb_username': options.email,
+             'mb_password': options.password
+             }
+    data = urllib.urlencode(values)
+    # Now expects to log in only via the website. Thanks chrippa.
+    headers = {'Referer': 'http://www.gomtv.net/'}
+    request = urllib2.Request(gomtvSignInURL, data, headers)
+    response = urllib2.urlopen(request)
+    # The real response that we want are the cookies, so returning None is fine.
+    return
+
+def grabLivePage(gomtvLiveURL, options):
+    response = grabPage(gomtvLiveURL)
+    # If a special event occurs, we know that the live page response
+    # will just be some JavaScript that redirects the browser to the
+    # real live page. We assume that the entireity of this JavaScript
+    # is less than 200 characters long, and that real live pages are
+    # more than that.
+    if len(response) < 200:
+        # Grabbing the real live page URL
+        gomtvLiveURL = getEventLivePageURL(gomtvLiveURL, response)
+        logging.info('Redirecting to the Event\'s \'Live\' page (%s).' % gomtvLiveURL)
+        response = grabPage(gomtvLiveURL)
+        # Most events are free and have both HQ and SQ streams, but
+        # not SQTest. As a result, assume we really want SQ after asking
+        # for SQTest, makes it more seamless between events and GSL.
+        if options.quality == 'SQTest':
+            options.quality = 'SQ'
+    return response, options
+
+def grabPage(url):
+    request = urllib2.Request(url)
+    response = urllib2.urlopen(request)
+    return response.read()
+
+def grabStreams(options):
     # Setting urllib2 up so that we can store cookies
     cookiejar = cookielib.LWPCookieJar()
     opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(cookiejar))
@@ -134,113 +250,7 @@ def main():
     urls = []
     for i in range(numberOfStreams):
         urls.append(parseStreamURL(goxFiles[i]))
-
-    # Put variables into VLC command
-    vlcCmd = Template(options.vlcCmd).substitute(
-            {'cache': options.cache, 
-             'debug' : ('', '--verbose=2')[debug]})
-
-    # In order to ensure we don't save over the top of the same stream
-    # when two streams are present, prepend 'alternate-' to the filename
-    # of the second stream.
-    outputFiles = []
-    for i in range(numberOfStreams):
-        '-' if options.mode == 'play' else options.outputFile
-        if (options.mode == 'play'):
-            outputFiles.append('-')
-        else:
-            if len(urls) > 1:
-                outputFiles.append("alternate-" + options.outputFile)
-            else:
-                outputFiles.append(options.outputFile)
-
-    # Create shell commands
-    cmds = []
-    for i in range(numberOfStreams):
-        url = urls[i]
-        outputFile = outputFiles[i]
-
-        webCmd = Template(options.webCmd).substitute(
-                {'url' : url, 'output' : outputFile})
-    
-        # Add verbose output for VLC if we are debugging
-        if debug:
-            webCmd = webCmd + ' -v'
-    
-        # If playing pipe wget/curl into VLC, else save stream to file
-        # We have already substituted $output with correct target.
-        if options.mode == 'play':
-            cmds.append(webCmd + ' | ' + vlcCmd)
-        else:
-            cmds.append(webCmd)
-
-    if numberOfStreams > 1:
-        logging.info('Stream URLs: %s' % urls)
-        logging.info('Commands: %s' % cmds)
-    else:
-        logging.info('Stream URL: %s' % urls[0])
-        logging.info('Command: %s' % cmds[0])
-
-    if options.mode == 'play':
-        if numberOfStreams > 1:
-            print 'Playing streams...'
-        else:
-            print 'Playing stream...'
-    else:
-        if numberOfStreams > 1:
-            print 'Saving streams as ' + outputFiles + ' ...'
-        else:
-            print 'Saving stream as "' + outputFiles[0] + '" ...'
-
-    # Executing command
-    try:
-        for i in range(numberOfStreams):
-            subprocess.Popen(cmds[i], shell = True)
-    except KeyboardInterrupt:
-        # Swallow it, we are terminating anyway and don't want a stack trace.
-        pass
-    except OSError:
-        # If wget/curl fails to grab the stream, give up
-        pass
-
-def signIn(gomtvSignInURL, options):
-    values = {
-             'cmd': 'login',
-             'rememberme': '1',
-             'mb_username': options.email,
-             'mb_password': options.password
-             }
-    data = urllib.urlencode(values)
-    # Now expects to log in only via the website. Thanks chrippa.
-    headers = {'Referer': 'http://www.gomtv.net/'}
-    request = urllib2.Request(gomtvSignInURL, data, headers)
-    response = urllib2.urlopen(request)
-    # The real response that we want are the cookies, so returning None is fine.
-    return
-
-def grabLivePage(gomtvLiveURL, options):
-    response = grabPage(gomtvLiveURL)
-    # If a special event occurs, we know that the live page response
-    # will just be some JavaScript that redirects the browser to the
-    # real live page. We assume that the entireity of this JavaScript
-    # is less than 200 characters long, and that real live pages are
-    # more than that.
-    if len(response) < 200:
-        # Grabbing the real live page URL
-        gomtvLiveURL = getEventLivePageURL(gomtvLiveURL, response)
-        logging.info('Redirecting to the Event\'s \'Live\' page (%s).' % gomtvLiveURL)
-        response = grabPage(gomtvLiveURL)
-        # Most events are free and have both HQ and SQ streams, but
-        # not SQTest. As a result, assume we really want SQ after asking
-        # for SQTest, makes it more seamless between events and GSL.
-        if options.quality == 'SQTest':
-            options.quality = 'SQ'
-    return response, options
-
-def grabPage(url):
-    request = urllib2.Request(url)
-    response = urllib2.urlopen(request)
-    return response.read()
+    return numberOfStreams, urls
 
 def parseOptions(vlcCmdDefault, webCmdDefault):
     # Collecting options parsed in from the command line
