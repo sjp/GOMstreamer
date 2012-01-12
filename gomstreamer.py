@@ -74,6 +74,14 @@ def main():
     # Seeing if we're running the latest version of GOMstreamer
     checkForUpdate()
 
+    if options.mode != 'play':
+        # Avoid overwriting any existing files by adding a timestamp
+        if os.path.exists(options.outputFile):
+            newFileName = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S_')
+            newFileName = newFileName + options.outputFile
+            logging.warning('%s exists, saving as %s instead.', options.outputFile, newFileName)
+            options.outputFile = newFileName
+
     if options.mode == 'scheduled-save':
         # Delaying execution until necessary
         delay(options.kt)
