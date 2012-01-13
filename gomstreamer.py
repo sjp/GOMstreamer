@@ -46,7 +46,7 @@ else:
     logging.basicConfig(level = logging.WARNING,
                         format='%(levelname)s %(message)s')
 
-VERSION = '0.8.0'
+VERSION = '0.9.0'
 
 def main():
     curlCmd = 'curl -A KPeerClient "$url" -o "$output"'
