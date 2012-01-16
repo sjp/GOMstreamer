@@ -149,16 +149,16 @@ def main():
     try:
         for i in range(numberOfStreams):
             procs.append(subprocess.Popen(cmds[i], shell = True))
+        for i in range(numberOfStreams):
+            procs[i].wait()
     except KeyboardInterrupt:
         # Swallow it, we are terminating anyway and don't want a stack trace.
         for i in range(numberOfStreams):
             procs[i].kill()
-        sys.exit(0)
     except OSError:
         # If wget/curl fails to grab the stream, give up
         for i in range(numberOfStreams):
             procs[i].kill()
-        sys.exit(0)
     finally:
         sys.exit(0)
 
