@@ -46,7 +46,7 @@ else:
     logging.basicConfig(level = logging.WARNING,
                         format='%(levelname)s %(message)s')
 
-VERSION = '0.9.1'
+VERSION = '0.10.0'
 
 def main():
     curlCmd = 'curl -A KPeerClient "$url" -o "$output"'
@@ -60,7 +60,6 @@ def main():
     logging.debug('Password: %s', options.password)
     logging.debug('Mode: %s', options.mode)
     logging.debug('Quality: %s', options.quality)
-    logging.debug('Output: %s', options.outputFile)
     logging.debug('VlcCmd: %s', options.vlcCmd)
     logging.debug('WebCmd: %s', options.webCmd)
 
@@ -74,15 +73,7 @@ def main():
     # Seeing if we're running the latest version of GOMstreamer
     checkForUpdate()
 
-    if options.mode != 'play':
-        # Avoid overwriting any existing files by adding a timestamp
-        if os.path.exists(options.outputFile):
-            newFileName = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S_')
-            newFileName = newFileName + options.outputFile
-            logging.warning('%s exists, saving as %s instead.', options.outputFile, newFileName)
-            options.outputFile = newFileName
-
-    if options.mode == 'scheduled-save':
+    if options.mode == 'scheduled-play':
         # Delaying execution until necessary
         delay(options.kt)
 
@@ -94,37 +85,21 @@ def main():
             {'cache': options.cache, 
              'debug' : ('', '--verbose=2')[debug]})
 
-    # In order to ensure we don't save over the top of the same stream
-    # when two streams are present, prepend 'alternate-' to the filename
-    # of the second stream.
-    outputFiles = []
-    for i in range(numberOfStreams):
-        if (options.mode == 'play'):
-            outputFiles.append('-')
-        elif i == 0:
-            outputFiles.append(options.outputFile)
-        else:
-            outputFiles.append('alternate-' + options.outputFile)
-
     # Create shell commands
     cmds = []
     for i in range(numberOfStreams):
         url = urls[i]
-        outputFile = outputFiles[i]
 
         webCmd = Template(options.webCmd).substitute(
-                {'url' : url, 'output' : outputFile})
+                {'url' : url, 'output' : '-'})
     
         # Add verbose output for VLC if we are debugging
         if debug:
             webCmd = webCmd + ' -v'
     
-        # If playing pipe wget/curl into VLC, else save stream to file
+        # When playing, pipe wget/curl into VLC
         # We have already substituted $output with correct target.
-        if options.mode == 'play':
-            cmds.append(webCmd + ' | ' + vlcCmd)
-        else:
-            cmds.append(webCmd)
+        cmds.append(webCmd + ' | ' + vlcCmd)
 
     if numberOfStreams > 1:
         logging.info('Stream URLs: %s' % urls)
@@ -133,16 +108,10 @@ def main():
         logging.info('Stream URL: %s' % urls[0])
         logging.info('Command: %s' % cmds[0])
 
-    if options.mode == 'play':
-        if numberOfStreams > 1:
-            print 'Playing streams...'
-        else:
-            print 'Playing stream...'
+    if numberOfStreams > 1:
+        print 'Playing streams...'
     else:
-        if numberOfStreams > 1:
-            print 'Saving streams as %s ...' % ', '.join(map(str, outputFiles))
-        else:
-            print 'Saving stream as "%s" ...' % outputFiles[0]
+        print 'Playing stream...'
 
     # Executing command
     procs = []
@@ -239,7 +208,14 @@ def grabStreams(options):
             # Grab the response of the URL listed on the Live page for a stream
             logging.info('Grabbing the GOX XML file for the %s stream.' % options.quality)
             goxFile = grabPage(url)
-    
+
+            # It's possible to have a second stream available to premium viewers only
+            if (goxFile == '1002' or goxFile == '') and options.quality == 'SQTest' and i > 0:
+                logging.warning('Unable to use the alternate stream without premium membership.')
+                logging.warning('Using only the first stream.')
+                validGoxFound = True
+                break
+
             # The response for the GOX XML if an incorrect stream quality is chosen is 1002.
             if (goxFile == '1002' or goxFile == ''):
                 newQuality = 'SQ' if options.quality == 'HQ' else 'SQTest'
@@ -266,13 +242,13 @@ def parseOptions(vlcCmdDefault, webCmdDefault):
     parser.add_option('-p', '--password', dest = 'password', help = 'Password to your GOMtv account')
     parser.add_option('-e', '--email', dest = 'email', help = 'Email your GOMtv account uses')
     parser.add_option('-m', '--mode', dest = 'mode',
-                      help = 'Mode of use: "play", "save" or "scheduled-save". Default is "play". This parameter is case sensitive.',
-                      choices=['play', 'save', 'scheduled-save'])
+                      help = 'Mode of use: "play" or "scheduled-play". Default is "play". This parameter is case sensitive.',
+                      choices = ['play', 'scheduled-play'])
     parser.add_option('-q', '--quality', dest = 'quality', help = 'Stream quality to use: "HQ", "SQ" or "SQTest". Default is "SQTest". This parameter is case sensitive.')
     parser.add_option('-s', '--stream', dest = 'streamChoice',
-                      help = 'When more than one stream is available, this determines which stream to use. Possible choices are "first", "alternate" and "both". The default is "first". This parameter is case sensitive.')
-    parser.add_option('-o', '--output', dest = 'outputFile', help = 'File to save stream to (Default = "dump.ogm")')
-    parser.add_option('-t', '--time', dest = 'kt', help = 'If the "scheduled-save" mode is used, this option holds the value of the *Korean* time to record at in HH:MM format. (Default = "18:00")')
+                      help = 'When more than one stream is available, this determines which stream to use. Possible choices are "first", "alternate" and "both". The default is "both". This parameter is case sensitive.',
+                      choices = ['first', 'alternate', 'both'])
+    parser.add_option('-t', '--time', dest = 'kt', help = 'If the "scheduled-play" mode is used, this option holds the value of the *Korean* time to record at in HH:MM format. (Default = "18:00")')
     parser.add_option('-v', '--vlccmd', '-c', '--command', dest = 'vlcCmd', help = 'Custom command for playing stream from stdout')
     parser.add_option('-w', '--webcmd', dest = 'webCmd', help = 'Custom command for producing stream on stdout')
     parser.add_option('-d', '--buffer-time', dest = 'cache', help = 'VLC cache size in [ms]')
@@ -280,8 +256,7 @@ def parseOptions(vlcCmdDefault, webCmdDefault):
     parser.set_defaults(vlcCmd = vlcCmdDefault)
     parser.set_defaults(webCmd = webCmdDefault)
     parser.set_defaults(quality = 'SQTest')  # Setting default stream quality to 'SQTest'
-    parser.set_defaults(outputFile = 'dump.ogm')  # Save to dump.ogm by default
-    parser.set_defaults(streamChoice = 'first')  # Use the first available stream by default
+    parser.set_defaults(streamChoice = 'both')  # Use both streams by default
     parser.set_defaults(mode = 'play')  # Want to play the stream by default
     parser.set_defaults(kt = '18:00')  # If we are scheduling a recording, do it at 18:00 KST by default
     parser.set_defaults(cache = 30000)  # Caching 30s by default
@@ -337,7 +312,19 @@ def checkForUpdate():
         response = urllib2.urlopen(request)
         latestVersion = response.read().strip()
 
-        if VERSION < latestVersion:
+        versionParts = map(int, VERSION.split('.'))
+        latestParts = map(int, latestVersion.split('.'))
+
+        needsUpdate = False
+        for i in range(len(versionParts)):
+            # Have a newer version than what's available, no need for an update
+            if versionParts[i] > latestParts[i]:
+                break
+            if versionParts[i] < latestParts[i]:
+                needsUpdate = True
+                break
+
+        if needsUpdate:
             logging.warning('========================================================================')
             logging.warning('')
             logging.warning('Your version of GOMstreamer is ' + VERSION + '.')
