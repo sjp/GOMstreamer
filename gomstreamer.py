@@ -209,15 +209,21 @@ def grabStreams(options):
             logging.info('Grabbing the GOX XML file for the %s stream.' % options.quality)
             goxFile = grabPage(url)
 
-            # It's possible to have a second stream available to premium viewers only
-            if (goxFile == '1002' or goxFile == '') and options.quality == 'SQTest' and i > 0:
-                logging.warning('Unable to use the alternate stream without premium membership.')
-                logging.warning('Using only the first stream.')
-                validGoxFound = True
-                break
-
             # The response for the GOX XML if an incorrect stream quality is chosen is 1002.
             if (goxFile == '1002' or goxFile == ''):
+                # Breaking when we reach SQTest, either switch streams to 'first' or give up
+                if options.quality == 'SQTest':
+                    if i > 0 and validGoxFound:
+                        logging.warning('Unable to use the alternate stream without premium membership.')
+                        logging.warning('Using only the first stream.')
+                        break
+                    elif i == 0 and options.streamChoice == 'both':
+                        logging.warning('Unable to use the first stream, attempting the alternate stream')
+                        break
+                    else:
+                        logging.error('Unable to use %s quality stream.', options.quality)
+                        logging.error('No %s quality streams available for use.', options.quality)
+                        sys.exit(1)
                 newQuality = 'SQ' if options.quality == 'HQ' else 'SQTest'
                 logging.warning('Unable to use %s quality stream.', options.quality)
                 logging.warning('Purchase a premium ticket for access to this stream quality.')
