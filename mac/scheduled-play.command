@@ -1,15 +1,33 @@
 #!/bin/sh
-####################
-# If you're comfortable with your password being viewable in plaintext, you may
-# create a PASSWORD variable with your password in it. By default, the script
-# will prompt you for your password at runtime.
-EMAIL='youremail@example.com'
+############################################################################
+# If you're comfortable with your login credentials being viewable in plain
+# text, you may uncomment the EMAIL and PASSWORD variables and place your
+# GomTV.net credentials inside them. The script will simply ask you for 
+# your login information at runtime if not provided here.
+############################################################################
+
+###############################
+# Your preferences here!
+###############################
+#EMAIL='youremail@example.com'
+#PASSWORD='yourpassword'
 QUALITY='SQTest'
 MODE='scheduled-play'
 KST='18:00'
 STREAM='both'
 ####################
+
+###############################
+# Don't edit beyond this point
+###############################
+
 PARENT_DIR="$(dirname "$( cd "$( dirname "$0" )" && pwd )")"
+
+# If email not set in variable, get email from user at runtime.
+if [[ "$EMAIL" = "" ]];
+then
+	read -p "GomTV.net Email: " EMAIL
+fi
 
 # If password not set in variable, get password from user at runtime.
 if [[ "$PASSWORD" = "" ]];
