@@ -9,7 +9,7 @@
 :: Your preferences here!
 :::::::::::::::::::::::::::::::
 ::@set EMAIL="youremail@example.com"
-::@set PASSWORD="yourpassword"
+::@set PASSWORD="PASSWORD"
 @set QUALITY="SQTest"
 @set STREAM="both"
 

@@ -10,7 +10,7 @@
 # Your preferences here!
 ###############################
 #EMAIL='youremail@example.com'
-#PASSWORD='yourpassword'
+#PASSWORD='PASSWORD'
 QUALITY='SQTest'
 STREAM='both'
 
@@ -21,13 +21,13 @@ STREAM='both'
 PARENT_DIR="$(dirname "$( cd "$( dirname "$0" )" && pwd )")"
 
 # If email not set in variable, get email from user at runtime.
-if [[ "$EMAIL" = "" ]];
+if [ "$EMAIL" = "" ];
 then
 	read -p "GOMtv.net Email: " EMAIL
 fi
 
 # If password not set in variable, get password from user at runtime.
-if [[ "$PASSWORD" = "" ]];
+if [ "$PASSWORD" = "" ];
 then
   # Turn off echo so password doesn't show up when typing.
 	stty -echo
