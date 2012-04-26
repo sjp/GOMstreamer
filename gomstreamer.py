@@ -24,7 +24,6 @@ import datetime
 import logging
 import os
 import re
-import StringIO
 import subprocess
 import sys
 import time
@@ -144,7 +143,7 @@ def signIn(gomtvSignInURL, options):
     # Now expects to log in only via the website. Thanks chrippa.
     headers = {'Referer': 'http://www.gomtv.net/'}
     request = urllib2.Request(gomtvSignInURL, data, headers)
-    response = urllib2.urlopen(request)
+    urllib2.urlopen(request)
     # The real response that we want are the cookies, so returning None is fine.
     return
 
