@@ -220,7 +220,7 @@ def grabStreams(options, method = 'full'):
                         logging.warning('Unable to use the alternate stream without premium membership.')
                         logging.warning('Using only the first stream.')
                         break
-                    elif i == 0 and options.streamChoice == 'both':
+                    elif i == 0 and options.streamChoice == 'both' and len(urls) > 1:
                         logging.warning('Unable to use the first stream, attempting the alternate stream')
                         break
                     else:
