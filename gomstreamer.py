@@ -227,7 +227,12 @@ def grabStreams(options, method = 'full'):
                         logging.error('Unable to use %s quality stream.', options.quality)
                         logging.error('No %s quality streams available for use.', options.quality)
                         sys.exit(1)
-                newQuality = 'SQ' if options.quality == 'HQ' else 'SQTest'
+                if options.quality == 'HQ':
+                    newQuality = 'SQ'
+                elif options.quality == 'SQ':
+                    newQuality = 'HQTest'
+                else:
+                    newQuality = 'SQTest'
                 logging.warning('Unable to use %s quality stream.', options.quality)
                 logging.warning('Purchase a premium ticket for access to this stream quality.')
                 logging.warning('Trying %s quality instead.', newQuality)
