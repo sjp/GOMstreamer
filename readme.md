@@ -1,6 +1,8 @@
 GOMstreamer Readme
 ==================
 
+**GOMstreamer is now inactive. I have written a [post on my website](http://sjp.co.nz/posts/retiring-gomstreamer/) explaining why.**
+
 Introduction
 ------------
 GOMstreamer is a Python utility allowing OSX and other Unix based OS users to watch GOMtv GSL streams.
